@@ -1,4 +1,4 @@
-# helm-ag2.el
+# helm-ag2.el ![](https://github.com/syohex/emacs-helm-ag2/workflows/CI/badge.svg)
 
 ## Introduction
 
