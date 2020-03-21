@@ -29,7 +29,7 @@ Same as `helm-ag2` except to search only current file
 ##### `helm-ag2-project-root`
 
 Call `helm-ag2` at project root. `helm-ag2` seems directory as project root where
-there is `.git` or `.hg` or `.svn`.
+there is `.git`.
 
 
 ##### `helm-ag2-pop-stack`

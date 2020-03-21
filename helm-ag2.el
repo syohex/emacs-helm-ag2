@@ -693,8 +693,7 @@ Special commands:
    #'helm-end-of-source-p #'helm-next-line #'helm-beginning-of-buffer))
 
 (defsubst helm-ag2--root-directory-p ()
-  (cl-loop for dir in '(".git/" ".hg/")
-           thereis (file-directory-p dir)))
+  (file-directory-p ".git/"))
 
 (defun helm-ag2--up-one-level ()
   (interactive)
@@ -817,7 +816,7 @@ Continue searching the parent directory? "))
                  (forward-line 1))))))
 
 (defun helm-ag2--project-root ()
-  (cl-loop for dir in '(".git/" ".hg/" ".svn/" ".git")
+  (cl-loop for dir in '(".git/" ".git") ;; consider symlink case
            when (locate-dominating-file default-directory dir)
            return it))
 
