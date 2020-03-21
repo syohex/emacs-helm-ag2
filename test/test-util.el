@@ -93,15 +93,6 @@
           (expected '("ag" "--count" "-G.md$" "--" "--count foo bar")))
       (should (equal got expected)))))
 
-(ert-deftest construct-command-with-ignore-patterns ()
-  "helm-ag2--construct--command with ignore options"
-  (let ((helm-ag2-base-command "ag --nocolor --nogroup")
-        (helm-ag2-ignore-patterns '("*.md" "*.el"))
-        (helm-ag2--last-query "foo"))
-    (let ((got (helm-ag2--construct-command nil))
-          (expected '("ag" "--nocolor" "--nogroup" "--ignore=*.md" "--ignore=*.el" "foo")))
-      (should (equal got expected)))))
-
 (ert-deftest validate-regexp-with-valid-regexp ()
   (should (helm-ag2--validate-regexp "[a-z]\\([[:word:]]\\)")))
 
@@ -188,21 +179,5 @@ option specified"
              (lambda (attr &optional source compute)
                t)))
     (should (helm-ag2--search-this-file-p))))
-
-(ert-deftest visited-buffers ()
-  "Remove buffers which are matched against helm-ag2-ignore-buffer-patterns"
-  (cl-letf (((symbol-function 'buffer-list)
-             (lambda () '("aa.txt" "bb.md" "cc.el")))
-            ((symbol-function 'buffer-file-name)
-             (lambda (b) b))
-            ((symbol-function 'buffer-name)
-             (lambda (b) b)))
-    (let* ((helm-ag2-ignore-buffer-patterns nil)
-           (got (helm-ag2--file-visited-buffers)))
-      (should (equal got '("aa.txt" "bb.md" "cc.el"))))
-
-    (let* ((helm-ag2-ignore-buffer-patterns '("\\.md\\'" "\\`cc"))
-           (got (helm-ag2--file-visited-buffers)))
-      (should (equal got '("aa.txt"))))))
 
 ;;; test-util.el ends here
