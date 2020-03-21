@@ -109,10 +109,6 @@ Command line option of base command.
 Insert thing at point as default search pattern, if this value is `non nil`.
 You can set the parameter same as `thing-at-point`(Such as `'word`, `symbol` etc).
 
-##### `helm-ag2-use-grep-ignore-list`(Default: `nil`)
-
-Use `grep-find-ignored-files` and `grep-find-ignored-directories` as ignore pattern.
-They are specified to `--ignore' options."
 
 ##### `helm-ag2-edit-save`(Default: `t`)
 
@@ -123,17 +119,6 @@ Save buffers you edit at editing completed.
 Use Emacs Lisp regexp instead of PCRE as pattern.
 NOTE: this is very simple conversion.
 
-##### `helm-ag2-use-agignore`(Default: `nil`)
-
-Use `.agignore` file at project root if this variable is non nil.
-
-##### `helm-ag2-use-temp-buffer`(Default: `nil`)
-
-Use temporary buffer and not open file for persistent action.
-
-##### `helm-ag2-ignore-buffer-patterns`(Default: `nil`)
-
-Ignore buffer patterns of buffer search commands.
 
 #### NOTE
 

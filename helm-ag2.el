@@ -64,15 +64,6 @@
    You can set value same as `thing-at-point'"
   :type 'symbol)
 
-(defcustom helm-ag2-ignore-patterns nil
-  "Ignore patterns for `ag'. This parameters are specified as --ignore"
-  :type '(repeat string))
-
-(defcustom helm-ag2-use-grep-ignore-list nil
-  "Use `grep-find-ignored-files' and `grep-find-ignored-directories' as ignore pattern.
-They are specified to `--ignore' options."
-  :type 'boolean)
-
 (defcustom helm-ag2-edit-save t
   "Save buffers you edit at completed."
   :type 'boolean)
@@ -80,18 +71,6 @@ They are specified to `--ignore' options."
 (defcustom helm-ag2-use-emacs-lisp-regexp nil
   "[Experimental] Use Emacs Lisp regexp instead of PCRE."
   :type 'boolean)
-
-(defcustom helm-ag2-use-agignore nil
-  "Use .agignore where is at project root if it exists."
-  :type 'boolean)
-
-(defcustom helm-ag2-use-temp-buffer nil
-  "Use temporary buffer for persistent action."
-  :type 'boolean)
-
-(defcustom helm-ag2-ignore-buffer-patterns nil
-  "Use temporary buffer for persistent action."
-  :type '(repeat regexp))
 
 (defface helm-ag2-edit-deleted-line
   '((t (:inherit font-lock-comment-face :strike-through t)))
@@ -144,15 +123,6 @@ They are specified to `--ignore' options."
       (helm-ag2--insert-thing-at-point helm-ag2-insert-at-point)
     ""))
 
-(defun helm-ag2--construct-ignore-option (pattern)
-  (concat "--ignore=" pattern))
-
-(defun helm-ag2--grep-ignore-list-to-options ()
-  (require 'grep)
-  (cl-loop for ignore in (append grep-find-ignored-files
-                                 grep-find-ignored-directories)
-           collect (helm-ag2--construct-ignore-option ignore)))
-
 (defun helm-ag2--parse-options-and-query (input)
   (with-temp-buffer
     (insert input)
@@ -182,31 +152,15 @@ They are specified to `--ignore' options."
         (list query)
       (nconc (nreverse options) (list query)))))
 
-(defsubst helm-ag2--search-buffer-p (bufname)
-  (cl-loop for regexp in helm-ag2-ignore-buffer-patterns
-           never (string-match-p regexp bufname)))
-
 (defun helm-ag2--file-visited-buffers ()
-  (let ((bufs (cl-loop for buf in (buffer-list)
-                       when (buffer-file-name buf)
-                       collect it)))
-    (if (not helm-ag2-ignore-buffer-patterns)
-        bufs
-      (cl-loop for buf in bufs
-               when (helm-ag2--search-buffer-p buf)
-               collect buf))))
+  (cl-loop for buf in (buffer-list)
+           when (buffer-file-name buf)
+           collect it))
 
 (defun helm-ag2--construct-targets (targets)
   (let ((default-directory helm-ag2--default-directory))
     (cl-loop for target in targets
              collect (file-relative-name target))))
-
-(defun helm-ag2--root-agignore ()
-  (let ((root (helm-ag2--project-root)))
-    (when root
-      (let ((default-directory root))
-        (when (file-exists-p ".agignore")
-          (expand-file-name (concat default-directory ".agignore")))))))
 
 (defun helm-ag2--construct-command (this-file)
   (let* ((commands (split-string helm-ag2-base-command nil t))
@@ -215,14 +169,6 @@ They are specified to `--ignore' options."
     (when helm-ag2-command-option
       (let ((ag-options (split-string helm-ag2-command-option nil t)))
         (setq args (append args ag-options))))
-    (when helm-ag2-use-agignore
-      (helm-aif (helm-ag2--root-agignore)
-          (setq args (append args (list "-p" it)))))
-    (when helm-ag2-ignore-patterns
-      (setq args (append args (mapcar 'helm-ag2--construct-ignore-option
-                                      helm-ag2-ignore-patterns))))
-    (when helm-ag2-use-grep-ignore-list
-      (setq args (append args (helm-ag2--grep-ignore-list-to-options))))
     (setq args (append args (helm-ag2--parse-query helm-ag2--last-query)))
     (when this-file
       (setq args (append args (list this-file))))
@@ -316,11 +262,8 @@ They are specified to `--ignore' options."
     (helm-attr 'search-this-file)))
 
 (defun helm-ag2--persistent-action (candidate)
-  (let ((find-func (if helm-ag2-use-temp-buffer
-                       #'helm-ag2--open-file-with-temp-buffer
-                     #'find-file)))
-    (helm-ag2--find-file-action candidate find-func (helm-ag2--search-this-file-p) t)
-    (helm-highlight-current-line)))
+  (helm-ag2--find-file-action candidate #'find-file (helm-ag2--search-this-file-p) t)
+  (helm-highlight-current-line))
 
 (defun helm-ag2--validate-regexp (regexp)
   (condition-case nil
