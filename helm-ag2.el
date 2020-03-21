@@ -73,10 +73,6 @@
 They are specified to `--ignore' options."
   :type 'boolean)
 
-(defcustom helm-ag2-fuzzy-match nil
-  "Enable fuzzy match"
-  :type 'boolean)
-
 (defcustom helm-ag2-edit-save t
   "Save buffers you edit at completed."
   :type 'boolean)
@@ -435,7 +431,6 @@ They are specified to `--ignore' options."
     :init 'helm-ag2--init
     :real-to-display 'helm-ag2--candidate-transformer
     :persistent-action 'helm-ag2--persistent-action
-    :fuzzy-match helm-ag2-fuzzy-match
     :action helm-ag2--actions
     :candidate-number-limit 9999
     :keymap helm-ag2-map

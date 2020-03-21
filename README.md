@@ -109,10 +109,6 @@ Command line option of base command.
 Insert thing at point as default search pattern, if this value is `non nil`.
 You can set the parameter same as `thing-at-point`(Such as `'word`, `symbol` etc).
 
-##### `helm-ag2-fuzzy-match`(Default: `nil`)
-
-Enable fuzzy matching.
-
 ##### `helm-ag2-use-grep-ignore-list`(Default: `nil`)
 
 Use `grep-find-ignored-files` and `grep-find-ignored-directories` as ignore pattern.
