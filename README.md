@@ -26,36 +26,15 @@ with `C-u` prefix.
 
 Same as `helm-ag2` except to search only current file
 
-##### `helm-do-ag`
-
-Search with `ag` like `helm-do-grep-ag `, `helm-grep-do-git-grep`.
-You can specify extra command line option of `ag` with minus prefix(`M--` or `C--`).
-
-![Screen cast of helm-do-ag](image/helm-do-ag.gif)
-
-##### `helm-do-ag-this-file`
-
-Same as `helm-do-ag` except to search only current file
-
 ##### `helm-ag2-project-root`
 
 Call `helm-ag2` at project root. `helm-ag2` seems directory as project root where
 there is `.git` or `.hg` or `.svn`.
 
 
-##### `helm-do-ag-project-root`
-
-Call `helm-do-ag` at project root.
-
-
 ##### `helm-ag2-buffers`
 
 Search buffers by `helm-ag2`
-
-
-##### `helm-do-ag-buffers`
-
-Search buffers by `helm-do-ag`
 
 
 ##### `helm-ag2-pop-stack`
@@ -93,17 +72,6 @@ Pattern: -Gmd$ search_pattern
 Command line options is `-Gmd$` and search pattern is `search_pattern`.
 `helm-ag2` treats words which starts with `-` as command line option.
 
-##### Pattern contains space(`helm-do-ag`)
-
-```
-Pattern: foo\ bar\ baz
-```
-
-Search pattern is `foo\ bar\ baz`. You need to escape spaces with backslash.
-
-In `helm-ag2`, you need not to escape spaces.
-
-
 ##### Pattern starts with `-`
 
 ```
@@ -130,7 +98,7 @@ Please always use `=` separator for using long option. Don't use space as separa
 
 ##### `helm-ag2-base-command`(Default: `ag --nocolor --nogroup`)
 
-Base command of `ag`. Windows users should set `--vimgrep` option for using `helm-do-ag`. See [#293](https://github.com/syohex/emacs-helm-ag2/issues/293#issuecomment-280850455)
+Base command of `ag`.
 
 ##### `helm-ag2-command-option`(Default: `nil`)
 
@@ -149,11 +117,6 @@ Enable fuzzy matching.
 
 Use `grep-find-ignored-files` and `grep-find-ignored-directories` as ignore pattern.
 They are specified to `--ignore' options."
-
-##### `helm-ag2-always-set-extra-option`(Default: `nil`)
-
-Always set extra command line option of `ag` in `helm-do-ag`
-if this value is non-nil.
 
 ##### `helm-ag2-edit-save`(Default: `t`)
 
@@ -183,7 +146,7 @@ Ignore buffer patterns of buffer search commands.
 
 ## Keymap
 
-`helm-ag2-map` and `helm-do-ag-map` are inherited by `helm-map`.
+`helm-ag2-map` are inherited by `helm-map`.
 
 | Key              | Action                                                                     |
 |:-----------------|:---------------------------------------------------------------------------|
@@ -260,11 +223,3 @@ I think the searching tool which supports grep like output, helm-ag2 can work wi
 (custom-set-variables
  '(helm-ag2-base-command "rg --no-heading"))
 ```
-
-#### NOTE: For pt and rg users
-
-When using `ag` or `ack`, `helm-do-ag` convert pattern from `foo bar` to `"(?=.*" foo ".*)(?=.*" bar ".*)"`
-which pattern matches line which contains both `foo` and `bar`. But when using `pt` or `rg`, `helm-do-ag`
-does not convert the pattern because Golang `regexp`(`pt` is written in Golang)
-and rust's `regex` (`rg` is written in rust) does not support look-a-head pattern.
-So using `pt` or `rg` behaves differently from `ag` when you use such pattern.

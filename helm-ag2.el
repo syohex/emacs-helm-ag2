@@ -75,10 +75,6 @@
 They are specified to `--ignore' options."
   :type 'boolean)
 
-(defcustom helm-ag2-always-set-extra-option nil
-  "Always set `ag' options of `helm-do-ag'."
-  :type 'boolean)
-
 (defcustom helm-ag2-fuzzy-match nil
   "Enable fuzzy match"
   :type 'boolean)
@@ -103,11 +99,6 @@ They are specified to `--ignore' options."
   "Use temporary buffer for persistent action."
   :type '(repeat regexp))
 
-(defcustom helm-ag2-show-status-function 'helm-ag2-show-status-default-mode-line
-  "Function called after that `ag' process is finished after `helm-do-ag'.
-Default behaviour shows finish and result in mode-line."
-  :type 'function)
-
 (defface helm-ag2-edit-deleted-line
   '((t (:inherit font-lock-comment-face :strike-through t)))
   "Face of deleted line in edit mode.")
@@ -129,8 +120,6 @@ Default behaviour shows finish and result in mode-line."
 (defvar helm-ag2--buffer-search nil)
 (defvar helm-ag2--command-features '())
 (defvar helm-ag2--ignore-case nil)
-(defvar helm-do-ag--extensions nil)
-(defvar helm-do-ag--commands nil)
 
 (defun helm-ag2--ignore-case-p (cmds input)
   (cl-loop for cmd in cmds
@@ -333,9 +322,7 @@ Default behaviour shows finish and result in mode-line."
 
 (defun helm-ag2--search-this-file-p ()
   (unless (helm-ag2--vimgrep-option)
-    (if (eq (helm-get-current-source) 'helm-source-do-ag)
-        (helm-ag2--search-only-one-file-p)
-      (helm-attr 'search-this-file))))
+    (helm-attr 'search-this-file)))
 
 (defun helm-ag2--persistent-action (candidate)
   (let ((find-func (if helm-ag2-use-temp-buffer
@@ -885,7 +872,7 @@ Continue searching the parent directory? "))
             ;; we don't know anything about this pattern
             (t input)))))
 
-(defun helm-ag2--do-ag-highlight-patterns (input)
+(defun helm-ag2--highlight-patterns (input)
   (if (memq 'pcre helm-ag2--command-features)
       (cl-loop with regexp = (helm-ag2--pcre-to-elisp-regexp input)
                for pattern in (helm-ag2--split-string regexp)
@@ -897,7 +884,7 @@ Continue searching the parent directory? "))
   (save-excursion
     (goto-char (point-min))
     (forward-line 1)
-    (let ((patterns (helm-ag2--do-ag-highlight-patterns input)))
+    (let ((patterns (helm-ag2--highlight-patterns input)))
       (cl-loop with one-file-p = (and (not (helm-ag2--vimgrep-option))
                                       (helm-ag2--search-only-one-file-p))
                while (not (eobp))
@@ -927,160 +914,6 @@ Continue searching the parent directory? "))
                    (put-text-property start bound 'helm-cand-num num))
                  (forward-line 1))))))
 
-(defun helm-ag2-show-status-default-mode-line ()
-  (setq mode-line-format
-        '(" " mode-line-buffer-identification " "
-          (:eval (propertize
-                  (format
-                   "[AG process finished - (%s results)] "
-                   (helm-get-candidate-number))
-                  'face 'helm-grep-finish)))))
-
-(defun helm-ag2--do-ag-propertize (input)
-  (with-helm-window
-    (helm-ag2--remove-carrige-returns)
-    (when helm-ag2--buffer-search
-      (helm-ag2--abbreviate-file-name))
-    (helm-ag2--propertize-candidates input)
-    (when helm-ag2-show-status-function
-      (funcall helm-ag2-show-status-function)
-      (force-mode-line-update))))
-
-(defun helm-ag2--construct-extension-options ()
-  (cl-loop for ext in helm-do-ag--extensions
-           unless (string= ext "*")
-           collect
-           (concat "-G" (replace-regexp-in-string
-                         "\\*" ""
-                         (replace-regexp-in-string "\\." "\\\\." ext)))))
-
-(defun helm-ag2--show-result-p (options has-query)
-  (or has-query
-      (cl-loop for opt in options
-               thereis (string-prefix-p "-g" opt))))
-
-(defun helm-ag2--construct-do-ag-command (pattern)
-  (let* ((opt-query (helm-ag2--parse-options-and-query pattern))
-         (options (car opt-query))
-         (query (cdr opt-query))
-         (has-query (not (string= query ""))))
-    (when helm-ag2-use-emacs-lisp-regexp
-      (setq query (helm-ag2--elisp-regexp-to-pcre query)))
-    (when (helm-ag2--show-result-p options has-query)
-      (append (car helm-do-ag--commands)
-              options
-              (and has-query (list (helm-ag2--join-patterns query)))
-              (cdr helm-do-ag--commands)))))
-
-(defun helm-ag2--do-ag-set-command ()
-  (let ((cmd-opts (split-string helm-ag2-base-command nil t)))
-    (when helm-ag2-command-option
-      (setq cmd-opts (append cmd-opts (split-string helm-ag2-command-option nil t))))
-    (when helm-ag2--extra-options
-      (setq cmd-opts (append cmd-opts (split-string helm-ag2--extra-options))))
-    (when helm-ag2-ignore-patterns
-      (setq cmd-opts
-            (append cmd-opts
-                    (mapcar #'helm-ag2--construct-ignore-option
-                            helm-ag2-ignore-patterns))))
-    (when helm-ag2-use-agignore
-      (helm-aif (helm-ag2--root-agignore)
-          (setq cmd-opts (append cmd-opts (list "-p" it)))))
-    (when helm-do-ag--extensions
-      (setq cmd-opts (append cmd-opts (helm-ag2--construct-extension-options))))
-    (let (targets)
-      (when helm-ag2--buffer-search
-        (setq targets (helm-ag2--file-visited-buffers)))
-      (setq helm-do-ag--commands
-            (cons cmd-opts
-                  (if helm-ag2--default-target
-                      (append targets (helm-ag2--construct-targets helm-ag2--default-target))
-                    targets))))))
-
-(defun helm-ag2--do-ag-candidate-process ()
-  (let* ((non-essential nil)
-         (default-directory (or helm-ag2--default-directory
-                                helm-ag2--last-default-directory
-                                default-directory))
-         (cmd-args (helm-ag2--construct-do-ag-command helm-pattern)))
-    (when cmd-args
-      (let ((proc (apply #'start-file-process "helm-do-ag" nil cmd-args)))
-        (setq helm-ag2--last-query helm-pattern
-              helm-ag2--last-command cmd-args
-              helm-ag2--ignore-case (helm-ag2--ignore-case-p cmd-args helm-pattern)
-              helm-ag2--last-default-directory default-directory)
-        (prog1 proc
-          (set-process-sentinel
-           proc
-           (lambda (process event)
-             (helm-process-deferred-sentinel-hook
-              process event (helm-default-directory))
-             (when (string= event "finished\n")
-               (helm-ag2--do-ag-propertize helm-input)))))))))
-
-(defconst helm-do-ag--help-message
-  "\n* Helm Do Ag\n
-
-\n** Specific commands for Helm Ag:\n
-\\<helm-do-ag-map>
-\\[helm-ag2--run-other-window-action]\t\t-> Open result in other buffer
-\\[helm-ag2--do-ag-up-one-level]\t\t-> Search in parent directory.
-\\[helm-ag2-edit]\t\t-> Edit search results.
-\\[helm-ag2--do-ag-help]\t\t-> Show this help.
-\n** Helm Ag Map\n
-\\{helm-map}")
-
-(defun helm-ag2--do-ag-help ()
-  (interactive)
-  (let ((helm-help-message helm-do-ag--help-message))
-    (helm-help)))
-
-(defvar helm-do-ag-map
-  (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map helm-ag2-map)
-    (define-key map (kbd "C-l") 'helm-ag2--do-ag-up-one-level)
-    (define-key map (kbd "C-c ?") 'helm-ag2--do-ag-help)
-    map)
-  "Keymap for `helm-do-ag'.")
-
-(defvar helm-source-do-ag
-  (helm-build-async-source "The Silver Searcher"
-    :init 'helm-ag2--do-ag-set-command
-    :candidates-process 'helm-ag2--do-ag-candidate-process
-    :persistent-action  'helm-ag2--persistent-action
-    :action helm-ag2--actions
-    :nohighlight t
-    :requires-pattern 3
-    :candidate-number-limit 9999
-    :keymap helm-do-ag-map
-    :follow (and helm-follow-mode-persistent 1)))
-
-(defun helm-ag2--do-ag-up-one-level ()
-  (interactive)
-  (if (or (not (helm-ag2--root-directory-p))
-          (y-or-n-p "Current directory might be the project root. \
-Continue searching the parent directory? "))
-      (let ((parent (file-name-directory (directory-file-name default-directory)))
-            (initial-input helm-input))
-        (helm-run-after-exit
-         (lambda ()
-           (let ((default-directory parent)
-                 (helm-ag2--default-directory parent))
-             (setq helm-ag2--last-default-directory default-directory)
-             (helm-attrset 'name (helm-ag2--helm-header parent)
-                           helm-source-do-ag)
-             (helm :sources '(helm-source-do-ag) :buffer "*helm-ag2*"
-                   :keymap helm-do-ag-map :input initial-input
-                   :history 'helm-ag2--helm-history)))))
-    (message nil)))
-
-(defun helm-ag2--set-do-ag-option ()
-  (when (or (< (prefix-numeric-value current-prefix-arg) 0)
-            helm-ag2-always-set-extra-option)
-    (let ((option (read-string "Extra options: " (or helm-ag2--extra-options "")
-                               'helm-ag2--extra-options-history)))
-      (setq helm-ag2--extra-options option))))
-
 (defun helm-ag2--set-command-features ()
   (let ((cmd (intern (car (split-string helm-ag2-base-command)))))
     (setq helm-ag2--command-features (list cmd))
@@ -1102,66 +935,6 @@ Continue searching the parent directory? "))
                            'fixed
                          're2))))))
 
-(defun helm-ag2--do-ag-searched-extensions ()
-  (when (and current-prefix-arg (= (abs (prefix-numeric-value current-prefix-arg)) 4))
-    (helm-grep-get-file-extensions helm-ag2--default-target)))
-
-(defsubst helm-do-ag--target-one-directory-p (targets)
-  (and (listp targets) (= (length targets) 1) (file-directory-p (car targets))))
-
-(defun helm-do-ag--helm ()
-  (let ((search-dir (if (not (helm-ag2--windows-p))
-                        helm-ag2--default-directory
-                      (if (helm-do-ag--target-one-directory-p helm-ag2--default-target)
-                          (car helm-ag2--default-target)
-                        helm-ag2--default-directory))))
-    (helm-attrset 'name (helm-ag2--helm-header search-dir)
-                  helm-source-do-ag)
-    (helm :sources '(helm-source-do-ag) :buffer "*helm-ag2*" :keymap helm-do-ag-map
-          :input (or (helm-ag2--marked-input t)
-                     (helm-ag2--insert-thing-at-point helm-ag2-insert-at-point))
-          :history 'helm-ag2--helm-history)))
-
-;;;###autoload
-(defun helm-do-ag-this-file ()
-  (interactive)
-  (helm-aif (buffer-file-name)
-      (helm-do-ag default-directory (list it))
-    (error "Error: This buffer is not visited file.")))
-
-;;;###autoload
-(defun helm-do-ag (&optional basedir targets)
-  (interactive)
-  (require 'helm-mode)
-  (helm-ag2--init-state)
-  (let* ((helm-ag2--default-directory (or basedir default-directory))
-         (helm-ag2--default-target (cond (targets targets)
-                                         ((and (helm-ag2--windows-p) basedir) (list basedir))
-                                         (t
-                                          (when (and (not basedir) (not helm-ag2--buffer-search))
-                                            (helm-read-file-name
-                                             "Search in file(s): "
-                                             :default default-directory
-                                             :marked-candidates t :must-match t)))))
-         (helm-do-ag--extensions (when helm-ag2--default-target
-                                   (helm-ag2--do-ag-searched-extensions)))
-         (one-directory-p (helm-do-ag--target-one-directory-p
-                           helm-ag2--default-target)))
-    (helm-ag2--set-do-ag-option)
-    (helm-ag2--set-command-features)
-    (helm-ag2--save-current-context)
-    (helm-attrset 'search-this-file
-                  (and (= (length helm-ag2--default-target) 1)
-                       (not (file-directory-p (car helm-ag2--default-target)))
-                       (car helm-ag2--default-target))
-                  helm-source-do-ag)
-    (if (or (helm-ag2--windows-p) (not one-directory-p)) ;; Path argument must be specified on Windows
-        (helm-do-ag--helm)
-      (let* ((helm-ag2--default-directory
-              (file-name-as-directory (car helm-ag2--default-target)))
-             (helm-ag2--default-target nil))
-        (helm-do-ag--helm)))))
-
 (defun helm-ag2--project-root ()
   (cl-loop for dir in '(".git/" ".hg/" ".svn/" ".git")
            when (locate-dominating-file default-directory dir)
@@ -1176,24 +949,10 @@ Continue searching the parent directory? "))
     (helm-ag2 rootdir)))
 
 ;;;###autoload
-(defun helm-do-ag-project-root ()
-  (interactive)
-  (let ((rootdir (helm-ag2--project-root)))
-    (unless rootdir
-      (error "Could not find the project root. Create a git, hg, or svn repository there first. "))
-    (helm-do-ag rootdir)))
-
-;;;###autoload
 (defun helm-ag2-buffers ()
   (interactive)
   (let ((helm-ag2--buffer-search t))
     (helm-ag2)))
-
-;;;###autoload
-(defun helm-do-ag-buffers ()
-  (interactive)
-  (let ((helm-ag2--buffer-search t))
-    (helm-do-ag)))
 
 (provide 'helm-ag2)
 

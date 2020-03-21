@@ -102,57 +102,6 @@
           (expected '("ag" "--nocolor" "--nogroup" "--ignore=*.md" "--ignore=*.el" "foo")))
       (should (equal got expected)))))
 
-(ert-deftest construct-do-ag-command ()
-  "helm-ag2--construct-do-ag-command"
-  (let ((helm-ag2-base-command "ag --nocolor --nogroup"))
-    (helm-ag2--do-ag-set-command)
-    (let ((got (helm-ag2--construct-do-ag-command "somepattern"))
-          (expected '("ag" "--nocolor" "--nogroup" "somepattern")))
-      (should (equal got expected)))
-
-    (let* ((helm-ag2--command-features '())  ;; unknown pattern
-           (got (helm-ag2--construct-do-ag-command "pat1 pat2"))
-           (expected '("ag" "--nocolor" "--nogroup" "pat1 pat2")))
-      (should (equal got expected)))
-
-    (let* ((helm-ag2--command-features '(fixed))
-           (got (helm-ag2--construct-do-ag-command "pat1 pat2"))
-           (expected '("ag" "--nocolor" "--nogroup" "pat1 pat2")))
-      (should (equal got expected)))
-
-    (let* ((helm-ag2--command-features '(re2))
-           (got (helm-ag2--construct-do-ag-command "pat1 pat2"))
-           (expected '("ag" "--nocolor" "--nogroup" "pat1.*pat2")))
-      (should (equal got expected)))
-
-    (let* ((helm-ag2--command-features '(pcre))
-           (got (helm-ag2--construct-do-ag-command "pat1 pat2"))
-           (expected '("ag" "--nocolor" "--nogroup" "(?=.*pat1.*)(?=.*pat2.*)")))
-      (should (equal got expected)))
-
-    (let ((helm-ag2-command-option "--ignore-case --all-text"))
-      (helm-ag2--do-ag-set-command)
-      (let* ((got (helm-ag2--construct-do-ag-command "somepattern"))
-             (expected '("ag" "--nocolor" "--nogroup" "--ignore-case" "--all-text"
-                         "somepattern")))
-        (should (equal got expected))))
-
-    (let ((helm-ag2-ignore-patterns '("apple" "orange")))
-      (helm-ag2--do-ag-set-command)
-      (let* ((got (helm-ag2--construct-do-ag-command "somepattern"))
-             (expected '("ag" "--nocolor" "--nogroup" "--ignore=apple" "--ignore=orange"
-                         "somepattern")))
-        (should (equal got expected))))))
-
-(ert-deftest construct-do-ag-command-with-extra-option ()
-  "helm-ag2--construct-do-ag-command with extra options"
-  (let ((helm-ag2-base-command "ag --nocolor --nogroup")
-        (helm-ag2--extra-options "-G\\.md$"))
-    (helm-ag2--do-ag-set-command)
-    (let ((got (helm-ag2--construct-do-ag-command "somepattern"))
-          (expected '("ag" "--nocolor" "--nogroup" "-G\\.md$" "somepattern")))
-      (should (equal got expected)))))
-
 (ert-deftest validate-regexp-with-valid-regexp ()
   (should (helm-ag2--validate-regexp "[a-z]\\([[:word:]]\\)")))
 
@@ -228,7 +177,7 @@
   (should (equal (helm-ag2--split-string "aa\\\\ bb cc") '("aa\\\\" "bb" "cc"))))
 
 (ert-deftest join-pattern ()
-  "Convert pattern like normal helm command in helm-do-ag"
+  "Convert pattern like normal helm command"
   (let ((helm-ag2--command-features '()))  ;; unknown pattern
     (should (equal (helm-ag2--join-patterns "foo") "foo"))
     (should (equal (helm-ag2--join-patterns "foo bar") "foo bar")))
@@ -261,21 +210,7 @@ option specified"
             ((symbol-function 'helm-attr)
              (lambda (attr &optional source compute)
                t)))
-    (should (helm-ag2--search-this-file-p)))
-
-  (cl-letf (((symbol-function 'helm-get-current-source)
-             (lambda () 'helm-source-do-ag))
-            ((symbol-function 'helm-attr)
-             (lambda (attr &optional source compute)
-               t)))
-    (let ((helm-ag2--default-target '("a.txt" "b.txt")))
-      (should-not (helm-ag2--search-this-file-p)))
-
-    (let ((helm-ag2--default-target (list default-directory)))
-      (should-not (helm-ag2--search-this-file-p)))
-
-    (let ((helm-ag2--default-target '("a.txt")))
-      (should (helm-ag2--search-this-file-p)))))
+    (should (helm-ag2--search-this-file-p))))
 
 (ert-deftest visited-buffers ()
   "Remove buffers which are matched against helm-ag2-ignore-buffer-patterns"
