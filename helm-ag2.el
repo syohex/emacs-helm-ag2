@@ -90,7 +90,6 @@
 (defvar helm-ag2--original-window nil)
 (defvar helm-ag2--search-this-file-p nil)
 (defvar helm-ag2--default-target nil)
-(defvar helm-ag2--buffer-search nil)
 (defvar helm-ag2--command-features '())
 (defvar helm-ag2--ignore-case nil)
 
@@ -152,11 +151,6 @@
         (list query)
       (nconc (nreverse options) (list query)))))
 
-(defun helm-ag2--file-visited-buffers ()
-  (cl-loop for buf in (buffer-list)
-           when (buffer-file-name buf)
-           collect it))
-
 (defun helm-ag2--construct-targets (targets)
   (let ((default-directory helm-ag2--default-directory))
     (cl-loop for target in targets
@@ -172,8 +166,6 @@
     (setq args (append args (helm-ag2--parse-query helm-ag2--last-query)))
     (when this-file
       (setq args (append args (list this-file))))
-    (when helm-ag2--buffer-search
-      (setq args (append args (helm-ag2--file-visited-buffers))))
     (when helm-ag2--default-target
       (setq args (append args (helm-ag2--construct-targets helm-ag2--default-target))))
     (cons command args)))
@@ -184,14 +176,6 @@
       (goto-char (point-min))
       (while (re-search-forward "\xd" nil t)
         (replace-match "")))))
-
-(defun helm-ag2--abbreviate-file-name ()
-  (unless (helm-ag2--windows-p)
-    (save-excursion
-      (goto-char (point-min))
-      (forward-line 1)
-      (while (re-search-forward "^\\([^:]+\\)" nil t)
-        (replace-match (abbreviate-file-name (match-string-no-properties 1)))))))
 
 (defun helm-ag2--init ()
   (let ((buf-coding buffer-file-coding-system))
@@ -211,8 +195,6 @@
               (unless (executable-find (car cmds))
                 (error "'ag' is not installed."))
               (error "Failed: '%s'" helm-ag2--last-query))))
-        (when helm-ag2--buffer-search
-          (helm-ag2--abbreviate-file-name))
         (helm-ag2--remove-carrige-returns)
         (helm-ag2--save-current-context)))))
 
@@ -437,9 +419,7 @@
              (reverse dirs))))))
 
 (defsubst helm-ag2--helm-header (dir)
-  (if helm-ag2--buffer-search
-      "Search Buffers"
-    (concat "Search at " (abbreviate-file-name dir))))
+  (concat "Search at " (abbreviate-file-name dir)))
 
 (defun helm-ag2--run-other-window-action ()
   (interactive)
@@ -672,8 +652,6 @@ Special commands:
                    (apply #'process-file (car helm-ag2--last-command) nil t nil
                           (cdr helm-ag2--last-command))
                    (helm-ag2--remove-carrige-returns)
-                   (when helm-ag2--buffer-search
-                     (helm-ag2--abbreviate-file-name))
                    (helm-ag2--propertize-candidates helm-ag2--last-query)
                    (buffer-string))))
     (helm-ag2--put-result-in-save-buffer result helm-ag2--search-this-file-p)
@@ -850,12 +828,6 @@ Continue searching the parent directory? "))
     (unless rootdir
       (error "Could not find the project root. Create a git, hg, or svn repository there first. "))
     (helm-ag2 rootdir)))
-
-;;;###autoload
-(defun helm-ag2-buffers ()
-  (interactive)
-  (let ((helm-ag2--buffer-search t))
-    (helm-ag2)))
 
 (provide 'helm-ag2)
 

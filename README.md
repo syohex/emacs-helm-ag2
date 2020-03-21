@@ -32,11 +32,6 @@ Call `helm-ag2` at project root. `helm-ag2` seems directory as project root wher
 there is `.git` or `.hg` or `.svn`.
 
 
-##### `helm-ag2-buffers`
-
-Search buffers by `helm-ag2`
-
-
 ##### `helm-ag2-pop-stack`
 
 Move to point before jump
