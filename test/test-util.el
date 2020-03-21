@@ -1,8 +1,8 @@
 ;;; test-util.el --- test helm-ag2 utility functions
 
-;; Copyright (C) 2017 by Syohei YOSHIDA
+;; Copyright (C) 2020 by Shohei YOSHIDA
 
-;; Author: Syohei YOSHIDA <syohex@gmail.com>
+;; Author: Shohei YOSHIDA <syohex@gmail.com>
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -176,29 +176,6 @@
   (should (equal (helm-ag2--split-string "aa\\ bb cc") '("aa bb" "cc")))
   (should (equal (helm-ag2--split-string "aa\\\\ bb cc") '("aa\\\\" "bb" "cc"))))
 
-(ert-deftest join-pattern ()
-  "Convert pattern like normal helm command"
-  (let ((helm-ag2--command-features '()))  ;; unknown pattern
-    (should (equal (helm-ag2--join-patterns "foo") "foo"))
-    (should (equal (helm-ag2--join-patterns "foo bar") "foo bar")))
-
-  (let ((helm-ag2--command-features '(fixed)))
-    (should (equal (helm-ag2--join-patterns "foo") "foo"))
-    (should (equal (helm-ag2--join-patterns "foo bar") "foo bar")))
-
-  (let ((helm-ag2--command-features '(re2)))
-    (should (equal (helm-ag2--join-patterns "foo") "foo"))
-    (should (equal (helm-ag2--join-patterns "foo bar") "foo.*bar")))
-
-  (let ((helm-ag2--command-features '(pcre)))
-    (should (equal (helm-ag2--join-patterns "foo") "foo"))
-    (should (equal (helm-ag2--join-patterns "!") "!"))
-    (should (equal (helm-ag2--join-patterns "!foo") "^(?!.*foo).+$"))
-
-    (should (equal (helm-ag2--join-patterns "foo bar") "(?=.*foo.*)(?=.*bar.*)"))
-    (should (equal (helm-ag2--join-patterns "foo !") "(?=.*foo.*)(?=.*!.*)"))
-    (should (equal (helm-ag2--join-patterns "foo !bar") "(?=.*foo.*)(?=^(?!.*bar).+$)"))))
-
 (ert-deftest search-this-file-p ()
   "Ag does not show file name at searching only one file except '--vimgrep'
 option specified"
@@ -206,7 +183,7 @@ option specified"
     (should-not (helm-ag2--search-this-file-p)))
 
   (cl-letf (((symbol-function 'helm-get-current-source)
-             (lambda () 'helm-source-ag))
+             (lambda () 'helm-source-ag2))
             ((symbol-function 'helm-attr)
              (lambda (attr &optional source compute)
                t)))
@@ -227,41 +204,5 @@ option specified"
     (let* ((helm-ag2-ignore-buffer-patterns '("\\.md\\'" "\\`cc"))
            (got (helm-ag2--file-visited-buffers)))
       (should (equal got '("aa.txt"))))))
-
-(ert-deftest set-command-features ()
-  "Set search command features to `helm-ag2--command-features'"
-
-  ;; ack
-  (dolist (expected '(("-Q" . fixed)
-                      ("--literal" . fixed)
-                      ("-Quiet" . pcre)))
-    (let ((helm-ag2-base-command (concat "ack " (car expected))))
-      (helm-ag2--set-command-features)
-      (should (memq (cdr expected) helm-ag2--command-features))))
-
-  ;; ag
-  (dolist (expected '(("-Q" . fixed)
-                      ("--literal" . fixed)
-                      ("-F" . fixed)
-                      ("--fixed-strings" . fixed)
-                      ("-False" . pcre)))
-    (let ((helm-ag2-base-command (concat "ag " (car expected))))
-      (helm-ag2--set-command-features)
-      (should (memq (cdr expected) helm-ag2--command-features))))
-
-  ;; pt
-  (dolist (expected '(("-e" . re2)
-                      ("--eee" . fixed)))
-    (let ((helm-ag2-base-command (concat "pt " (car expected))))
-      (helm-ag2--set-command-features)
-      (should (memq (cdr expected) helm-ag2--command-features))))
-
-  ;; rg
-  (dolist (expected '(("-F" . fixed)
-                      ("--fixed-strings" . fixed)
-                      ("--fixed-stringssss" . re2)))
-    (let ((helm-ag2-base-command (concat "rg " (car expected))))
-      (helm-ag2--set-command-features)
-      (should (memq (cdr expected) helm-ag2--command-features)))))
 
 ;;; test-util.el ends here

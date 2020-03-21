@@ -190,36 +190,3 @@ current line indicates.
  '(helm-ag2-insert-at-point 'symbol)
  '(helm-ag2-ignore-buffer-patterns '("\\.txt\\'" "\\.mkd\\'")))
 ```
-
-## helm-ag2.el with other searching tools
-
-`helm-ag2.el` can work other searching tools like platinum searcher or ack instead of the silver searcher.
-I think the searching tool which supports grep like output, helm-ag2 can work with it.
-
-#### [the platinum searcher](https://github.com/monochromegane/the_platinum_searcher/)
-
-```lisp
-(custom-set-variables
- '(helm-ag2-base-command "pt -e --nocolor --nogroup"))
-```
-
-#### [ack](http://beyondgrep.com/)
-
-```lisp
-(custom-set-variables
- '(helm-ag2-base-command "ack --nocolor --nogroup"))
-```
-
-#### [sift](https://sift-tool.org/)
-
-```lisp
-(custom-set-variables
- '(helm-ag2-base-command "sift --no-color -n"))
-```
-
-#### [ripgrep](https://github.com/BurntSushi/ripgrep/)
-
-```lisp
-(custom-set-variables
- '(helm-ag2-base-command "rg --no-heading"))
-```

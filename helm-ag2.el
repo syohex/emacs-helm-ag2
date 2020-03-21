@@ -39,8 +39,6 @@
 (require 'compile)
 (require 'subr-x)
 
-(declare-function helm-read-file-name "helm-mode")
-(declare-function helm-grep-get-file-extensions "helm-grep")
 (declare-function helm-help "helm-help")
 
 (defgroup helm-ag2 nil
@@ -285,9 +283,6 @@ They are specified to `--ignore' options."
         target))))
 
 (defun helm-ag2--find-file-action (candidate find-func this-file &optional persistent)
-  (when (memq 'pt helm-ag2--command-features)
-    ;; 'pt' always show filename if matched file is only one.
-    (setq this-file nil))
   (let* ((file-line (helm-grep-split-line candidate))
          (filename (or this-file (cl-first file-line) candidate))
          (line (if this-file
@@ -808,7 +803,6 @@ Continue searching the parent directory? "))
   (let ((filename (file-name-nondirectory (buffer-file-name)))
         (helm-ag2--default-directory default-directory))
     (helm-ag2--query)
-    (helm-ag2--set-command-features)
     (helm-attrset 'search-this-file (file-relative-name (buffer-file-name))
                   helm-ag2-source)
     (helm-attrset 'name (format "Search at %s" filename) helm-ag2-source)
@@ -852,8 +846,7 @@ Continue searching the parent directory? "))
       (reverse (cl-loop for p in patterns unless (string= p "") collect p)))))
 
 (defsubst helm-ag2--convert-invert-pattern (pattern)
-  (when (and (memq 'pcre helm-ag2--command-features)
-             (string-prefix-p "!" pattern) (> (length pattern) 1))
+  (when (and (string-prefix-p "!" pattern) (> (length pattern) 1))
     (concat "^(?!.*" (substring pattern 1) ").+$")))
 
 (defun helm-ag2--join-patterns (input)
@@ -861,24 +854,17 @@ Continue searching the parent directory? "))
     (if (= (length patterns) 1)
         (or (helm-ag2--convert-invert-pattern (car patterns))
             (car patterns))
-      (cond ((memq 'pcre helm-ag2--command-features)
-             (cl-loop for s in patterns
-                      if (helm-ag2--convert-invert-pattern s)
-                      concat (concat "(?=" it ")")
-                      else
-                      concat (concat "(?=.*" s ".*)")))
-            ((memq 're2 helm-ag2--command-features)
-             (string-join patterns ".*"))
-            ;; we don't know anything about this pattern
-            (t input)))))
+      (cl-loop for s in patterns
+               if (helm-ag2--convert-invert-pattern s)
+               concat (concat "(?=" it ")")
+               else
+               concat (concat "(?=.*" s ".*)")))))
 
 (defun helm-ag2--highlight-patterns (input)
-  (if (memq 'pcre helm-ag2--command-features)
-      (cl-loop with regexp = (helm-ag2--pcre-to-elisp-regexp input)
-               for pattern in (helm-ag2--split-string regexp)
-               when (helm-ag2--validate-regexp pattern)
-               collect pattern)
-    (list (helm-ag2--join-patterns input))))
+  (cl-loop with regexp = (helm-ag2--pcre-to-elisp-regexp input)
+           for pattern in (helm-ag2--split-string regexp)
+           when (helm-ag2--validate-regexp pattern)
+           collect pattern))
 
 (defun helm-ag2--propertize-candidates (input)
   (save-excursion
@@ -913,27 +899,6 @@ Continue searching the parent directory? "))
                          (goto-char curpoint))))
                    (put-text-property start bound 'helm-cand-num num))
                  (forward-line 1))))))
-
-(defun helm-ag2--set-command-features ()
-  (let ((cmd (intern (car (split-string helm-ag2-base-command)))))
-    (setq helm-ag2--command-features (list cmd))
-    (cl-case cmd
-      (ack (add-to-list 'helm-ag2--command-features
-                        (if (string-match-p "-\\(?:Q\\|-literal\\)\\>" helm-ag2-base-command)
-                            'fixed
-                          'pcre)))
-      (ag (add-to-list 'helm-ag2--command-features
-                       (if (string-match-p "-\\(?:[QF]\\|-literal\\|-fixed-strings\\)\\>" helm-ag2-base-command)
-                           'fixed
-                         'pcre)))
-      (pt (add-to-list 'helm-ag2--command-features
-                       (if (string-match-p "-e\\>" helm-ag2-base-command)
-                           're2
-                         'fixed)))
-      (rg (add-to-list 'helm-ag2--command-features
-                       (if (string-match-p "-\\(?:F\\|-fixed-strings\\)\\>" helm-ag2-base-command)
-                           'fixed
-                         're2))))))
 
 (defun helm-ag2--project-root ()
   (cl-loop for dir in '(".git/" ".hg/" ".svn/" ".git")
