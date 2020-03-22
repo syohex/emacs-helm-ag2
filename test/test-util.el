@@ -34,7 +34,10 @@
     (should (equal got '("--nogroup" "--column" "foo bar"))))
 
   (let ((got (helm-ag2--parse-query "--column helm-ag2 ()")))
-    (should (equal got '("--column" "helm-ag2 ()")))))
+    (should (equal got '("--column" "helm-ag2 ()"))))
+
+  (let ((got (helm-ag2--parse-query "query -a -b")))
+    (should (equal got '("-a" "-b" "query")))))
 
 (ert-deftest construct-command ()
   "helm-ag2--construct--command"
