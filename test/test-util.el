@@ -43,16 +43,8 @@
   "helm-ag2--construct--command"
   (let ((helm-ag2-base-command "ag --nocolor --nogroup")
         (helm-ag2--last-query "pattern"))
-    (let ((got (helm-ag2--construct-command nil))
+    (let ((got (helm-ag2--construct-command))
           (expected '("ag" "--nocolor" "--nogroup" "pattern")))
-      (should (equal got expected)))))
-
-(ert-deftest construct-command-this-file ()
-  "helm-ag2--construct--command for this file"
-  (let ((helm-ag2-base-command "ag --nocolor --nogroup")
-        (helm-ag2--last-query "pattern"))
-    (let ((got (helm-ag2--construct-command "foo.el"))
-          (expected '("ag" "--nocolor" "--nogroup" "pattern" "foo.el")))
       (should (equal got expected)))))
 
 (ert-deftest construct-command-with-options ()
@@ -60,7 +52,7 @@
   (let ((helm-ag2-base-command "ag --nocolor --nogroup")
         (helm-ag2-command-option "--all-text --hidden -D")
         (helm-ag2--last-query "pattern"))
-    (let ((got (helm-ag2--construct-command nil))
+    (let ((got (helm-ag2--construct-command))
           (expected '("ag" "--nocolor" "--nogroup" "--all-text" "--hidden" "-D"
                       "pattern")))
       (should (equal got expected)))))
@@ -70,7 +62,7 @@
   (let ((helm-ag2-base-command "ag --nocolor --nogroup")
         (helm-ag2-command-option "--all-text --hidden -D")
         (helm-ag2--last-query "-G\\.md$ foo bar"))
-    (let ((got (helm-ag2--construct-command nil))
+    (let ((got (helm-ag2--construct-command))
           (expected '("ag" "--nocolor" "--nogroup" "--all-text" "--hidden" "-D"
                       "-G\\.md$" "foo bar")))
       (should (equal got expected))))
@@ -78,21 +70,21 @@
   (let ((helm-ag2-base-command "ag")
         (helm-ag2-command-option "")
         (helm-ag2--last-query "-- --count"))
-    (let ((got (helm-ag2--construct-command nil))
+    (let ((got (helm-ag2--construct-command))
           (expected '("ag" "--" "--count")))
       (should (equal got expected))))
 
   (let ((helm-ag2-base-command "ag")
         (helm-ag2-command-option "")
         (helm-ag2--last-query "helm-ag2"))
-    (let ((got (helm-ag2--construct-command nil))
+    (let ((got (helm-ag2--construct-command))
           (expected '("ag" "helm-ag2")))
       (should (equal got expected))))
 
   (let ((helm-ag2-base-command "ag")
         (helm-ag2-command-option "")
         (helm-ag2--last-query "--count -G.md$ -- --count foo bar"))
-    (let ((got (helm-ag2--construct-command nil))
+    (let ((got (helm-ag2--construct-command))
           (expected '("ag" "--count" "-G.md$" "--" "--count foo bar")))
       (should (equal got expected)))))
 
@@ -101,12 +93,6 @@
 
 (ert-deftest validate-regexp-with-invalid-regexp ()
   (should-not (helm-ag2--validate-regexp "\\(")))
-
-(ert-deftest transform-for-this-file ()
-  "helm-ag2--candidate-transform-for-this-file"
-  (let ((helm-ag2--last-query "hoge"))
-    (should (helm-ag2--candidate-transform-for-this-file "10:hoge"))
-    (should-not (helm-ag2--candidate-transform-for-this-file ":hoge"))))
 
 (ert-deftest transform-for-files ()
   "helm-ag2--candidate-transform-for-files"
@@ -169,18 +155,5 @@
   (should (equal (helm-ag2--split-string "aa       bb         cc") '("aa" "bb" "cc")))
   (should (equal (helm-ag2--split-string "aa\\ bb cc") '("aa bb" "cc")))
   (should (equal (helm-ag2--split-string "aa\\\\ bb cc") '("aa\\\\" "bb" "cc"))))
-
-(ert-deftest search-this-file-p ()
-  "Ag does not show file name at searching only one file except '--vimgrep'
-option specified"
-  (let ((helm-ag2--last-command '("--vimgrep")))
-    (should-not (helm-ag2--search-this-file-p)))
-
-  (cl-letf (((symbol-function 'helm-get-current-source)
-             (lambda () 'helm-source-ag2))
-            ((symbol-function 'helm-attr)
-             (lambda (attr &optional source compute)
-               t)))
-    (should (helm-ag2--search-this-file-p))))
 
 ;;; test-util.el ends here

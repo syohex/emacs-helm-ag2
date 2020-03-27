@@ -22,10 +22,6 @@
 Input search word with `ag` command. You can change search directory
 with `C-u` prefix.
 
-##### `helm-ag2-this-file`
-
-Same as `helm-ag2` except to search only current file
-
 ##### `helm-ag2-project-root`
 
 Call `helm-ag2` at project root. `helm-ag2` seems directory as project root where
