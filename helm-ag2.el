@@ -76,6 +76,14 @@
   '((t (:inherit font-lock-comment-face :strike-through t)))
   "Face of deleted line in edit mode.")
 
+(defface helm-ag2-edit-edited-line
+  '((((class color) (background light))
+     :background "aquamarine" :foreground "black")
+    (((class color) (background dark))
+     :background "limegreen" :foreground "black")
+    (t :inverse-video t))
+  "Face of edited line in edit mode")
+
 (defvar helm-ag2--command-history '())
 (defvar helm-ag2--helm-history '())
 (defvar helm-ag2--context-stack nil)
@@ -531,7 +539,11 @@
             (let ((file-line-begin (match-beginning 4))
                   (file-line-end (match-end 4))
                   (body-begin (match-beginning 3))
-                  (body-end (match-end 3)))
+                  (body-end (match-end 3))
+                  (ov (make-overlay (match-beginning 0) (match-end 0))))
+              (overlay-put ov 'helm-ag2-edit-line t)
+              (overlay-put ov 'orig-content (buffer-substring-no-properties body-begin body-end))
+              (overlay-put ov 'start-offset (- body-begin (line-beginning-position)))
               (add-text-properties file-line-begin file-line-end
                                    '(face font-lock-function-name-face
                                           intangible t))
@@ -543,7 +555,35 @@
   (goto-char (point-min))
   (setq next-error-function 'compilation-next-error-function)
   (setq-local compilation-locs (make-hash-table :test 'equal :weakness 'value))
+  (add-hook 'after-change-functions #'helm-ag2--after-change-function nil t)
   (use-local-map helm-ag2-edit-map))
+
+(defun helm-ag2--edit-line-info (start end)
+  (cl-loop for o in (overlays-in start end)
+           when (overlay-get o 'helm-ag2-edit-line)
+           return o))
+
+(defun helm-ag2--after-change-function (_beg _end _len)
+  (save-excursion
+    (save-match-data
+      (let* ((line-start (line-beginning-position))
+             (line-end (line-end-position))
+             (line-info-ov (helm-ag2--edit-line-info line-start line-end))
+             (ov (cl-loop for o in (overlays-in line-start line-end)
+                          when (overlay-get o 'helm-ag2-edited)
+                          return o)))
+        (when line-info-ov
+          (let* ((orig (overlay-get line-info-ov 'orig-content))
+                 (offset (overlay-get line-info-ov 'start-offset))
+                 (current (buffer-substring-no-properties (+ line-start offset) line-end)))
+            (if (not (string= orig current))
+                (if ov
+                    (move-overlay ov line-start line-end)
+                  (let ((o (make-overlay line-start line-end)))
+                    (overlay-put o 'helm-ag2-edited t)
+                    (overlay-put o 'face 'helm-ag2-edit-edited-line)))
+              (when ov
+                (delete-overlay ov)))))))))
 
 (defun helm-ag2-edit ()
   (interactive)
