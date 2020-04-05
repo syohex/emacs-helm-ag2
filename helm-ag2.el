@@ -29,7 +29,6 @@
 ;;; Code:
 
 (eval-when-compile
-  (require 'grep)
   (defvar helm-help-message))
 
 (require 'cl-lib)
@@ -186,16 +185,17 @@
       (let* ((default-directory (or helm-ag2--default-directory
                                     default-directory))
              (cmds (helm-ag2--construct-command))
+             (search-command (car cmds))
              (coding-system-for-read buf-coding)
              (coding-system-for-write buf-coding))
         (setq helm-ag2--ignore-case (helm-ag2--ignore-case-p cmds helm-ag2--last-query)
               helm-ag2--last-command cmds)
-        (let ((ret (apply #'process-file (car cmds) nil t nil (cdr cmds))))
+        (let ((ret (apply #'process-file search-command nil t nil (cdr cmds))))
           (if (zerop (length (buffer-string)))
-              (error "No ag output: '%s'" helm-ag2--last-query)
+              (error "No output: '%s'" helm-ag2--last-query)
             (unless (zerop ret)
-              (unless (executable-find (car cmds))
-                (error "'ag' is not installed."))
+              (unless (executable-find search-command)
+                (error "'%s' is not installed" search-command))
               (error "Failed: '%s'" helm-ag2--last-query))))
         (helm-ag2--remove-carrige-returns)
         (helm-ag2--save-current-context)))))
@@ -327,23 +327,23 @@
 (defvar helm-ag2-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map helm-map)
-    (define-key map (kbd "C-c o") 'helm-ag2--run-other-window-action)
-    (define-key map (kbd "C-l") 'helm-ag2--up-one-level)
-    (define-key map (kbd "C-c C-e") 'helm-ag2-edit)
-    (define-key map (kbd "C-x C-s") 'helm-ag2--run-save-buffer)
-    (define-key map (kbd "C-c ?") 'helm-ag2-help)
-    (define-key map (kbd "C-c >") 'helm-ag2--next-file)
-    (define-key map (kbd "<right>") 'helm-ag2--next-file)
-    (define-key map (kbd "C-c <") 'helm-ag2--previous-file)
-    (define-key map (kbd "<left>") 'helm-ag2--previous-file)
+    (define-key map (kbd "C-c o") #'helm-ag2--run-other-window-action)
+    (define-key map (kbd "C-l") #'helm-ag2--up-one-level)
+    (define-key map (kbd "C-c C-e") #'helm-ag2-edit)
+    (define-key map (kbd "C-x C-s") #'helm-ag2--run-save-buffer)
+    (define-key map (kbd "C-c ?") #'helm-ag2-help)
+    (define-key map (kbd "C-c >") #'helm-ag2--next-file)
+    (define-key map (kbd "<right>") #'helm-ag2--next-file)
+    (define-key map (kbd "C-c <") #'helm-ag2--previous-file)
+    (define-key map (kbd "<left>") #'helm-ag2--previous-file)
     map)
   "Keymap for `helm-ag2'.")
 
 (defvar helm-ag2-source
   (helm-build-in-buffer-source "The Silver Searcher"
-    :init 'helm-ag2--init
-    :real-to-display 'helm-ag2--candidate-transformer
-    :persistent-action 'helm-ag2--persistent-action
+    :init #'helm-ag2--init
+    :real-to-display #'helm-ag2--candidate-transformer
+    :persistent-action #'helm-ag2--persistent-action
     :action helm-ag2--actions
     :candidate-number-limit 9999
     :keymap helm-ag2-map
@@ -494,10 +494,10 @@
 
 (defvar helm-ag2-edit-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") 'helm-ag2--edit-commit)
-    (define-key map (kbd "C-c C-k") 'helm-ag2--edit-abort)
-    (define-key map (kbd "C-c C-d") 'helm-ag2--mark-line-deleted)
-    (define-key map (kbd "C-c C-u") 'helm-ag2--unmark)
+    (define-key map (kbd "C-c C-c") #'helm-ag2--edit-commit)
+    (define-key map (kbd "C-c C-k") #'helm-ag2--edit-abort)
+    (define-key map (kbd "C-c C-d") #'helm-ag2--mark-line-deleted)
+    (define-key map (kbd "C-c C-u") #'helm-ag2--unmark)
     map))
 
 (defsubst helm-ag2--edit-func-to-keys (func)
@@ -553,7 +553,7 @@
   (other-window 1)
   (switch-to-buffer (get-buffer "*helm-ag2-edit*"))
   (goto-char (point-min))
-  (setq next-error-function 'compilation-next-error-function)
+  (setq next-error-function #'compilation-next-error-function)
   (setq-local compilation-locs (make-hash-table :test 'equal :weakness 'value))
   (add-hook 'after-change-functions #'helm-ag2--after-change-function nil t)
   (use-local-map helm-ag2-edit-map))
@@ -590,7 +590,7 @@
   (helm-exit-and-execute-action 'helm-ag2--edit))
 
 (defconst helm-ag2--help-message
-  "\n* Helm Ag\n
+  "\n* Helm Ag2\n
 
 \n** Specific commands for Helm Ag:\n
 \\<helm-ag2-map>
@@ -620,7 +620,7 @@
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") #'helm-ag2-mode-jump)
     (define-key map (kbd "C-o") #'helm-ag2-mode-jump-other-window)
-    (define-key map (kbd "g") 'helm-ag2--update-save-results)
+    (define-key map (kbd "g") #'helm-ag2--update-save-results)
     map))
 
 (define-derived-mode helm-ag2-mode special-mode "helm-ag2"
@@ -823,7 +823,7 @@ Continue searching the parent directory? "))
   (interactive)
   (let ((rootdir (helm-ag2--project-root)))
     (unless rootdir
-      (error "Could not find the project root. Create a git, hg, or svn repository there first. "))
+      (error "Could not find the project root. You need to 'git init'"))
     (helm-ag2 rootdir)))
 
 (provide 'helm-ag2)
