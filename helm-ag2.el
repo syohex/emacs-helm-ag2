@@ -67,10 +67,6 @@
   "Save buffers you edit at completed."
   :type 'boolean)
 
-(defcustom helm-ag2-use-emacs-lisp-regexp nil
-  "[Experimental] Use Emacs Lisp regexp instead of PCRE."
-  :type 'boolean)
-
 (defface helm-ag2-edit-deleted-line
   '((t (:inherit font-lock-comment-face :strike-through t)))
   "Face of deleted line in edit mode.")
@@ -144,8 +140,6 @@
   (let* ((parsed (helm-ag2--parse-options-and-query input))
          (options (car parsed))
          (query (cdr parsed)))
-    (when helm-ag2-use-emacs-lisp-regexp
-      (setq query (helm-ag2--elisp-regexp-to-pcre query)))
     (setq helm-ag2--last-query query
           helm-ag2--elisp-regexp-query (helm-ag2--pcre-to-elisp-regexp query))
     (setq helm-ag2--valid-regexp-for-emacs
@@ -297,7 +291,7 @@
           (if (= start end)
               (cl-incf last-pos)
             (put-text-property start end 'face 'helm-match candidate)
-            (setq last-pos (1+ (match-end 0)))))))
+            (setq last-pos (1+ end))))))
     candidate))
 
 (defun helm-ag2--candidate-transform-for-files (candidate)

@@ -105,12 +105,6 @@ You can set the parameter same as `thing-at-point`(Such as `'word`, `symbol` etc
 
 Save buffers you edit at editing completed.
 
-##### `helm-ag2-use-emacs-lisp-regexp`(Default: `nil`)
-
-Use Emacs Lisp regexp instead of PCRE as pattern.
-NOTE: this is very simple conversion.
-
-
 #### NOTE
 
 `helm` removes `file-line` type feature from 1.6.9. So `helm-ag2-source-type` is no longer available.
@@ -161,4 +155,13 @@ current line indicates.
  '(helm-ag2-command-option "--all-text")
  '(helm-ag2-insert-at-point 'symbol)
  '(helm-ag2-ignore-buffer-patterns '("\\.txt\\'" "\\.mkd\\'")))
+```
+
+## ripgrep
+
+You need to build `ripgrep` with `pcre` feature
+
+```lisp
+(custom-set-variables
+ '(helm-ag-base-command "rg --pcre2 --color=never --vimgrep"))
 ```
