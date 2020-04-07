@@ -49,14 +49,10 @@
 
 (defcustom helm-ag2-base-command
   (if (helm-ag2--windows-p)
-      "ag --vimgrep"
-    "ag --nocolor --nogroup")
+      '("ag" "--vimgrep")
+    '("ag" "--nocolor" "--nogroup"))
   "Base command of `ag'"
-  :type 'string)
-
-(defcustom helm-ag2-command-option nil
-  "Command line option of `ag'. This is appended after `helm-ag2-base-command'"
-  :type 'string)
+  :type '(repeat (string)))
 
 (defcustom helm-ag2-insert-at-point nil
   "Insert thing at point as search pattern.
@@ -154,12 +150,8 @@
              collect (file-relative-name target))))
 
 (defun helm-ag2--construct-command ()
-  (let* ((commands (split-string helm-ag2-base-command nil t))
-         (command (car commands))
-         (args (cdr commands)))
-    (when helm-ag2-command-option
-      (let ((ag-options (split-string helm-ag2-command-option nil t)))
-        (setq args (append args ag-options))))
+  (let ((command (car helm-ag2-base-command))
+        (args (cdr helm-ag2-base-command)))
     (setq args (append args (helm-ag2--parse-query helm-ag2--last-query)))
     (when helm-ag2--default-target
       (setq args (append args (helm-ag2--construct-targets helm-ag2--default-target))))
@@ -362,17 +354,15 @@
   (interactive)
   (setq helm-ag2--context-stack nil))
 
-(defun helm-ag2--marked-input (escape)
+(defun helm-ag2--marked-input ()
   (when (use-region-p)
     (let ((input (buffer-substring-no-properties (region-beginning) (region-end))))
       (deactivate-mark)
-      (if (not escape)
-          input
-        (replace-regexp-in-string " " "\\\\ " input)))))
+      input)))
 
 (defun helm-ag2--query ()
   (let* ((searched-word (helm-ag2--searched-word))
-         (marked-word (helm-ag2--marked-input nil))
+         (marked-word (helm-ag2--marked-input))
          (query (read-from-minibuffer "Pattern: "
                                       (or marked-word searched-word)
                                       nil
