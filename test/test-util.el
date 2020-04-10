@@ -27,65 +27,50 @@
 
 (ert-deftest parse-query ()
   "Parsing input which may contains option"
-  (let ((got (helm-ag2--parse-query "foo bar")))
-    (should (equal got '("foo bar"))))
+  (let ((got (helm-ag2--parse-query "foo")))
+    (should (equal got '("foo"))))
 
-  (let ((got (helm-ag2--parse-query "--nogroup --column foo bar")))
-    (should (equal got '("--nogroup" "--column" "foo bar"))))
+  (let ((got (helm-ag2--parse-query "--nogroup --column foo")))
+    (should (equal got '("--nogroup" "--column" "foo"))))
 
-  (let ((got (helm-ag2--parse-query "--column helm-ag2 ()")))
-    (should (equal got '("--column" "helm-ag2 ()"))))
+  (let ((got (helm-ag2--parse-query "--column helm-ag2")))
+    (should (equal got '("--column" "helm-ag2"))))
 
   (let ((got (helm-ag2--parse-query "query -a -b")))
     (should (equal got '("-a" "-b" "query")))))
 
 (ert-deftest construct-command ()
   "helm-ag2--construct--command"
-  (let ((helm-ag2-base-command "ag --nocolor --nogroup")
+  (let ((helm-ag2-base-command '("ag" "--nocolor" "--nogroup"))
         (helm-ag2--last-query "pattern"))
     (let ((got (helm-ag2--construct-command))
           (expected '("ag" "--nocolor" "--nogroup" "pattern")))
       (should (equal got expected)))))
 
-(ert-deftest construct-command-with-options ()
-  "helm-ag2--construct--command with options"
-  (let ((helm-ag2-base-command "ag --nocolor --nogroup")
-        (helm-ag2-command-option "--all-text --hidden -D")
-        (helm-ag2--last-query "pattern"))
-    (let ((got (helm-ag2--construct-command))
-          (expected '("ag" "--nocolor" "--nogroup" "--all-text" "--hidden" "-D"
-                      "pattern")))
-      (should (equal got expected)))))
-
 (ert-deftest construct-command-with-options-in-input ()
   "helm-ag2--construct--command with options in input"
-  (let ((helm-ag2-base-command "ag --nocolor --nogroup")
-        (helm-ag2-command-option "--all-text --hidden -D")
-        (helm-ag2--last-query "-G\\.md$ foo bar"))
+  (let ((helm-ag2-base-command '("ag" "--nocolor" "--nogroup"))
+        (helm-ag2--last-query "-G\\.md$ foo"))
     (let ((got (helm-ag2--construct-command))
-          (expected '("ag" "--nocolor" "--nogroup" "--all-text" "--hidden" "-D"
-                      "-G\\.md$" "foo bar")))
+          (expected '("ag" "--nocolor" "--nogroup" "-G\\.md$" "foo")))
       (should (equal got expected))))
 
-  (let ((helm-ag2-base-command "ag")
-        (helm-ag2-command-option "")
+  (let ((helm-ag2-base-command '("ag"))
         (helm-ag2--last-query "-- --count"))
     (let ((got (helm-ag2--construct-command))
           (expected '("ag" "--" "--count")))
       (should (equal got expected))))
 
-  (let ((helm-ag2-base-command "ag")
-        (helm-ag2-command-option "")
+  (let ((helm-ag2-base-command '("ag"))
         (helm-ag2--last-query "helm-ag2"))
     (let ((got (helm-ag2--construct-command))
           (expected '("ag" "helm-ag2")))
       (should (equal got expected))))
 
-  (let ((helm-ag2-base-command "ag")
-        (helm-ag2-command-option "")
-        (helm-ag2--last-query "--count -G.md$ -- --count foo bar"))
+  (let ((helm-ag2-base-command '("ag"))
+        (helm-ag2--last-query "--count -G.md$ -- --count"))
     (let ((got (helm-ag2--construct-command))
-          (expected '("ag" "--count" "-G.md$" "--" "--count foo bar")))
+          (expected '("ag" "--count" "-G.md$" "--" "--count")))
       (should (equal got expected)))))
 
 (ert-deftest validate-regexp-with-valid-regexp ()
@@ -120,7 +105,10 @@
     (should (string= got "\\S-\\s-\\S-")))
 
   (let ((got (helm-ag2--pcre-to-elisp-regexp "\\\\S\\\\s")))
-    (should (string= got "\\\\S\\\\s"))))
+    (should (string= got "\\\\S\\\\s")))
+
+  (let ((got (helm-ag2--pcre-to-elisp-regexp "foo bar")))
+    (should (string= got "foo\\|bar"))))
 
 (ert-deftest emacs-lisp-regexp-to-pcre ()
   "Simple convertion from Emacs lisp regexp to PCRE"
@@ -155,5 +143,10 @@
   (should (equal (helm-ag2--split-string "aa       bb         cc") '("aa" "bb" "cc")))
   (should (equal (helm-ag2--split-string "aa\\ bb cc") '("aa bb" "cc")))
   (should (equal (helm-ag2--split-string "aa\\\\ bb cc") '("aa\\\\" "bb" "cc"))))
+
+(ert-deftest join-patterns ()
+  "join pattern"
+  (should (string= (helm-ag2--join-patterns "abc") "abc"))
+  (should (string= (helm-ag2--join-patterns "!abc") "^(?!.*abc).+$")))
 
 ;;; test-util.el ends here

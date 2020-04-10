@@ -87,13 +87,9 @@ Please always use `=` separator for using long option. Don't use space as separa
 
 ## Customize
 
-##### `helm-ag2-base-command`(Default: `ag --nocolor --nogroup`)
+##### `helm-ag2-base-command`(Default: `'("ag" "--nocolor" "--nogroup")`)
 
 Base command of `ag`.
-
-##### `helm-ag2-command-option`(Default: `nil`)
-
-Command line option of base command.
 
 ##### `helm-ag2-insert-at-point`(Default: `nil`)
 
@@ -151,8 +147,7 @@ current line indicates.
 
 ```lisp
 (custom-set-variables
- '(helm-ag2-base-command "ag --nocolor --nogroup --ignore-case")
- '(helm-ag2-command-option "--all-text")
+ '(helm-ag2-base-command '("ag" "--nocolor" "--nogroup" "--ignore-case"))
  '(helm-ag2-insert-at-point 'symbol)
  '(helm-ag2-ignore-buffer-patterns '("\\.txt\\'" "\\.mkd\\'")))
 ```
@@ -163,5 +158,5 @@ You need to build `ripgrep` with `pcre` feature
 
 ```lisp
 (custom-set-variables
- '(helm-ag-base-command "rg --pcre2 --color=never --vimgrep"))
+ '(helm-ag-base-command '("rg" "--pcre2" "--color=never" "--vimgrep")))
 ```
