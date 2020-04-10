@@ -141,8 +141,8 @@
     (setq helm-ag2--valid-regexp-for-emacs
           (helm-ag2--validate-regexp helm-ag2--elisp-regexp-query))
     (if (not options)
-        (list query)
-      (nconc (nreverse options) (list query)))))
+        (list (helm-ag2--join-patterns query))
+      (nconc (nreverse options) (list (helm-ag2--join-patterns query))))))
 
 (defun helm-ag2--construct-targets (targets)
   (let ((default-directory helm-ag2--default-directory))
@@ -237,25 +237,27 @@
     (invalid-regexp nil)))
 
 (defun helm-ag2--pcre-to-elisp-regexp (pcre)
-  ;; This is very simple conversion
-  (with-temp-buffer
-    (insert pcre)
-    (goto-char (point-min))
-    ;; convert (, ), {, }, |
-    (while (re-search-forward "[(){}|]" nil t)
-      (backward-char 1)
-      (cond ((looking-back "\\\\\\\\" nil))
-            ((looking-back "\\\\" nil)
-             (delete-char -1))
-            (t
-             (insert "\\")))
-      (forward-char 1))
-    ;; convert \s and \S -> \s- \S-
-    (goto-char (point-min))
-    (while (re-search-forward "\\(\\\\s\\)" nil t)
-      (unless (looking-back "\\\\\\\\s" nil)
-        (insert "-")))
-    (buffer-string)))
+  (if (string-match-p "\\s-+" pcre)
+      (string-join (split-string pcre " " t) "\\|")
+    ;; This is very simple conversion
+    (with-temp-buffer
+      (insert pcre)
+      (goto-char (point-min))
+      ;; convert (, ), {, }, |
+      (while (re-search-forward "[(){}|]" nil t)
+        (backward-char 1)
+        (cond ((looking-back "\\\\\\\\" nil))
+              ((looking-back "\\\\" nil)
+               (delete-char -1))
+              (t
+               (insert "\\")))
+        (forward-char 1))
+      ;; convert \s and \S -> \s- \S-
+      (goto-char (point-min))
+      (while (re-search-forward "\\(\\\\s\\)" nil t)
+        (unless (looking-back "\\\\\\\\s" nil)
+          (insert "-")))
+      (buffer-string))))
 
 (defun helm-ag2--elisp-regexp-to-pcre (regexp)
   (with-temp-buffer
