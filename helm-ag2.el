@@ -54,7 +54,7 @@
   "Base command of `ag'"
   :type '(repeat (string)))
 
-(defcustom helm-ag2-insert-at-point nil
+(defcustom helm-ag2-insert-at-point 'symbol
   "Insert thing at point as search pattern.
    You can set value same as `thing-at-point'"
   :type 'symbol)
@@ -319,7 +319,6 @@
     (define-key map (kbd "C-l") #'helm-ag2--up-one-level)
     (define-key map (kbd "C-c C-e") #'helm-ag2-edit)
     (define-key map (kbd "C-x C-s") #'helm-ag2--run-save-buffer)
-    (define-key map (kbd "C-c ?") #'helm-ag2-help)
     (define-key map (kbd "C-c >") #'helm-ag2--next-file)
     (define-key map (kbd "<right>") #'helm-ag2--next-file)
     (define-key map (kbd "C-c <") #'helm-ag2--previous-file)
@@ -575,23 +574,6 @@
   (interactive)
   (helm-exit-and-execute-action 'helm-ag2--edit))
 
-(defconst helm-ag2--help-message
-  "\n* Helm Ag2\n
-
-\n** Specific commands for Helm Ag:\n
-\\<helm-ag2-map>
-\\[helm-ag2--run-other-window-action]\t\t-> Open result in other buffer
-\\[helm-ag2--up-one-level]\t\t-> Search in parent directory.
-\\[helm-ag2-edit]\t\t-> Edit search results.
-\\[helm-ag2-help]\t\t-> Show this help.
-\n** Helm Ag Map\n
-\\{helm-map}")
-
-(defun helm-ag2-help ()
-  (interactive)
-  (let ((helm-help-message helm-ag2--help-message))
-    (helm-help)))
-
 (defun helm-ag2-mode-jump ()
   (interactive)
   (let ((line (helm-current-line-contents)))
@@ -811,6 +793,103 @@ Continue searching the parent directory? "))
     (unless rootdir
       (error "Could not find the project root. You need to 'git init'"))
     (helm-ag2 rootdir)))
+
+(defvar helm-do-ag2--commands)
+
+(defun helm-ag2--do-ag-set-command ()
+  (setq helm-do-ag2--commands
+        (cons helm-ag2-base-command (helm-ag2--construct-targets helm-ag2--default-target))))
+
+(defun helm-ag2--do-ag-propertize (input)
+  (with-helm-window
+   (helm-ag2--remove-carrige-returns)
+   (helm-ag2--propertize-candidates input)))
+
+(defun helm-ag2--construct-do-ag-command (pattern)
+  (let* ((opt-query (helm-ag2--parse-options-and-query pattern))
+         (options (car opt-query))
+         (query (cdr opt-query)))
+    (unless (string-empty-p query)
+      (append (car helm-do-ag2--commands)
+              options
+              (list (helm-ag2--join-patterns query))
+              (cdr helm-do-ag2--commands)))))
+
+(defun helm-ag2--do-ag-candidate-process ()
+  (let* ((non-essential nil)
+         (default-directory (or helm-ag2--default-directory
+                                helm-ag2--last-default-directory
+                                default-directory))
+         (cmd-args (helm-ag2--construct-do-ag-command helm-pattern)))
+    (when cmd-args
+      (let ((proc (apply #'start-file-process "helm-do-ag2" nil cmd-args)))
+        (setq helm-ag2--last-query helm-pattern
+              helm-ag2--last-command cmd-args
+              helm-ag2--ignore-case (helm-ag2--ignore-case-p cmd-args helm-pattern)
+              helm-ag2--last-default-directory default-directory)
+        (prog1 proc
+          (set-process-sentinel
+           proc
+           (lambda (process event)
+             (helm-process-deferred-sentinel-hook
+              process event (helm-default-directory))
+             (when (string= event "finished\n")
+               (helm-ag2--do-ag-propertize helm-input)))))))))
+
+(defvar helm-do-ag2-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map helm-ag2-map)
+    map)
+  "Keymap for `helm-do-ag2'.")
+
+(defvar helm-source-do-ag2
+  (helm-build-async-source "The Silver Searcher"
+    :init #'helm-ag2--do-ag-set-command
+    :candidates-process #'helm-ag2--do-ag-candidate-process
+    :persistent-action  #'helm-ag2--persistent-action
+    :action helm-ag2--actions
+    :nohighlight t
+    :requires-pattern 3
+    :candidate-number-limit 9999
+    :keymap helm-do-ag2-map
+    :follow (and helm-follow-mode-persistent 1)))
+
+(defun helm-do-ag2--helm ()
+  (helm-attrset 'name (helm-ag2--helm-header helm-ag2--default-directory)
+                helm-source-do-ag2)
+  (helm :sources '(helm-source-do-ag2) :buffer "*helm-ag2*" :keymap helm-do-ag2-map
+        :input (or (helm-ag2--marked-input)
+                   (helm-ag2--insert-thing-at-point helm-ag2-insert-at-point))
+        :history 'helm-ag2--helm-history))
+
+;;;###autoload
+(defun helm-do-ag2-this-file ()
+  (interactive)
+  (helm-aif (buffer-file-name)
+      (helm-do-ag2 (list it))
+    (error "Error: This buffer is not visited file.")))
+
+;;;###autoload
+(defun helm-do-ag2 (&optional targets)
+  (interactive)
+  (require 'helm-mode)
+  (helm-ag2--init-state)
+  (let* ((helm-ag2--default-directory default-directory)
+         (helm-ag2--default-target (cond (targets targets)
+                                         ((and (helm-ag2--windows-p) basedir) (list basedir))
+                                         (t (list default-directory)))))
+    (helm-ag2--save-current-context)
+    (helm-attrset 'search-this-file
+                  (and (= (length helm-ag2--default-target) 1)
+                       (not (file-directory-p (car helm-ag2--default-target)))
+                       (car helm-ag2--default-target))
+                  helm-source-do-ag2)
+    (if (or (helm-ag2--windows-p) targets) ;; Path argument must be specified on Windows
+        (helm-do-ag2--helm)
+      (let* ((helm-ag2--default-directory
+              (file-name-as-directory (car helm-ag2--default-target)))
+             (helm-ag2--default-target nil))
+        (helm-do-ag2--helm)))))
 
 (provide 'helm-ag2)
 
