@@ -188,16 +188,22 @@
 
 (add-to-list 'debug-ignored-errors "^No ag output: ")
 
-(defun helm-ag2--search-only-one-file-p ()
-  (when (and helm-ag2--default-target (= (length helm-ag2--default-target) 1))
-    (let ((target (car helm-ag2--default-target)))
-      (unless (file-directory-p target)
-        target))))
+(defsubst helm-ag2--vimgrep-option ()
+  (member "--vimgrep" helm-ag2--last-command))
 
-(defun helm-ag2--find-file-action (candidate find-func &optional persistent)
+(defun helm-ag2--search-only-one-file-p ()
+  (when (and (not (helm-ag2--vimgrep-option)) (assoc 'search-this-file (helm-get-current-source)))
+    (when (= (length helm-ag2--default-target) 1)
+      (let ((target (car helm-ag2--default-target)))
+        (unless (file-directory-p target)
+          target)))))
+
+(defun helm-ag2--find-file-action (candidate find-func one-file &optional persistent)
   (let* ((file-line (helm-grep-split-line candidate))
-         (filename (or (cl-first file-line) candidate))
-         (line (cl-second file-line))
+         (filename (or one-file (cl-first file-line) candidate))
+         (line (if one-file
+                   (cl-first (split-string candidate ":"))
+                 (cl-second file-line)))
          (default-directory (or helm-ag2--default-directory
                                 helm-ag2--last-default-directory
                                 default-directory)))
@@ -222,11 +228,8 @@
       (set-auto-mode)
       (font-lock-fontify-region (point-min) (point-max)))))
 
-(defsubst helm-ag2--vimgrep-option ()
-  (member "--vimgrep" helm-ag2--last-command))
-
 (defun helm-ag2--persistent-action (candidate)
-  (helm-ag2--find-file-action candidate #'find-file t)
+  (helm-ag2--find-file-action candidate #'find-file (helm-ag2--search-only-one-file-p) t)
   (helm-highlight-current-line))
 
 (defun helm-ag2--validate-regexp (regexp)
@@ -300,10 +303,10 @@
       candidate))
 
 (defun helm-ag2--action-find-file (candidate)
-  (helm-ag2--find-file-action candidate #'find-file))
+  (helm-ag2--find-file-action candidate #'find-file nil))
 
 (defun helm-ag2--action-find-file-other-window (candidate)
-  (helm-ag2--find-file-action candidate #'find-file-other-window))
+  (helm-ag2--find-file-action candidate #'find-file-other-window nil))
 
 (defvar helm-ag2--actions
   (helm-make-actions
@@ -577,12 +580,12 @@
 (defun helm-ag2-mode-jump ()
   (interactive)
   (let ((line (helm-current-line-contents)))
-    (helm-ag2--find-file-action line #'find-file)))
+    (helm-ag2--find-file-action line #'find-file nil)))
 
 (defun helm-ag2-mode-jump-other-window ()
   (interactive)
   (let ((line (helm-current-line-contents)))
-    (helm-ag2--find-file-action line #'find-file-other-window)))
+    (helm-ag2--find-file-action line #'find-file-other-window nil)))
 
 (defvar helm-ag2-mode-map
   (let ((map (make-sparse-keymap)))
@@ -695,17 +698,11 @@ Continue searching the parent directory? "))
 (defun helm-ag2 (&optional basedir)
   (interactive)
   (helm-ag2--init-state)
-  (let ((dir (helm-ag2--get-default-directory))
-        targets)
-    (when (listp dir)
-      (setq basedir default-directory
-            targets dir))
-    (let ((helm-ag2--default-directory (or basedir dir))
-          (helm-ag2--default-target targets))
-      (helm-ag2--query)
-      (helm-attrset 'name (helm-ag2--helm-header helm-ag2--default-directory) helm-ag2-source)
-      (helm :sources '(helm-ag2-source) :buffer "*helm-ag2*" :keymap helm-ag2-map
-            :history 'helm-ag2--helm-history))))
+  (let ((helm-ag2--default-directory (or basedir default-directory)))
+    (helm-ag2--query)
+    (helm-attrset 'name (helm-ag2--helm-header helm-ag2--default-directory) helm-ag2-source)
+    (helm :sources '(helm-ag2-source) :buffer "*helm-ag2*" :keymap helm-ag2-map
+          :history 'helm-ag2--helm-history)))
 
 (defun helm-ag2--split-string (str)
   (with-temp-buffer
@@ -802,8 +799,8 @@ Continue searching the parent directory? "))
 
 (defun helm-ag2--do-ag-propertize (input)
   (with-helm-window
-   (helm-ag2--remove-carrige-returns)
-   (helm-ag2--propertize-candidates input)))
+    (helm-ag2--remove-carrige-returns)
+    (helm-ag2--propertize-candidates input)))
 
 (defun helm-ag2--construct-do-ag-command (pattern)
   (let* ((opt-query (helm-ag2--parse-options-and-query pattern))
@@ -865,9 +862,11 @@ Continue searching the parent directory? "))
 ;;;###autoload
 (defun helm-do-ag2-this-file ()
   (interactive)
-  (helm-aif (buffer-file-name)
-      (helm-do-ag2 (list it))
-    (error "Error: This buffer is not visited file.")))
+  (unless (buffer-file-name)
+    (error "Error: This buffer is not visited file."))
+  (let ((helm-source-do-ag2 (cons '(follow . 1) helm-source-do-ag2))
+        (helm-ag2-insert-at-point nil))
+    (helm-do-ag2 (list (buffer-file-name)))))
 
 ;;;###autoload
 (defun helm-do-ag2 (&optional targets)
@@ -876,13 +875,11 @@ Continue searching the parent directory? "))
   (helm-ag2--init-state)
   (let* ((helm-ag2--default-directory default-directory)
          (helm-ag2--default-target (cond (targets targets)
-                                         ((and (helm-ag2--windows-p) basedir) (list basedir))
                                          (t (list default-directory)))))
     (helm-ag2--save-current-context)
     (helm-attrset 'search-this-file
                   (and (= (length helm-ag2--default-target) 1)
-                       (not (file-directory-p (car helm-ag2--default-target)))
-                       (car helm-ag2--default-target))
+                       (not (file-directory-p (car helm-ag2--default-target))))
                   helm-source-do-ag2)
     (if (or (helm-ag2--windows-p) targets) ;; Path argument must be specified on Windows
         (helm-do-ag2--helm)
