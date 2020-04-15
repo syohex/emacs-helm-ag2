@@ -198,8 +198,9 @@
         (unless (file-directory-p target)
           target)))))
 
-(defun helm-ag2--find-file-action (candidate find-func one-file &optional persistent)
-  (let* ((file-line (helm-grep-split-line candidate))
+(defun helm-ag2--find-file-action (candidate find-func &optional persistent)
+  (let* ((one-file (helm-ag2--search-only-one-file-p))
+	 (file-line (helm-grep-split-line candidate))
          (filename (or one-file (cl-first file-line) candidate))
          (line (if one-file
                    (cl-first (split-string candidate ":"))
@@ -229,7 +230,7 @@
       (font-lock-fontify-region (point-min) (point-max)))))
 
 (defun helm-ag2--persistent-action (candidate)
-  (helm-ag2--find-file-action candidate #'find-file (helm-ag2--search-only-one-file-p) t)
+  (helm-ag2--find-file-action candidate #'find-file t)
   (helm-highlight-current-line))
 
 (defun helm-ag2--validate-regexp (regexp)
@@ -303,10 +304,10 @@
       candidate))
 
 (defun helm-ag2--action-find-file (candidate)
-  (helm-ag2--find-file-action candidate #'find-file nil))
+  (helm-ag2--find-file-action candidate #'find-file))
 
 (defun helm-ag2--action-find-file-other-window (candidate)
-  (helm-ag2--find-file-action candidate #'find-file-other-window nil))
+  (helm-ag2--find-file-action candidate #'find-file-other-window))
 
 (defvar helm-ag2--actions
   (helm-make-actions
@@ -580,12 +581,12 @@
 (defun helm-ag2-mode-jump ()
   (interactive)
   (let ((line (helm-current-line-contents)))
-    (helm-ag2--find-file-action line #'find-file nil)))
+    (helm-ag2--find-file-action line #'find-file)))
 
 (defun helm-ag2-mode-jump-other-window ()
   (interactive)
   (let ((line (helm-current-line-contents)))
-    (helm-ag2--find-file-action line #'find-file-other-window nil)))
+    (helm-ag2--find-file-action line #'find-file-other-window)))
 
 (defvar helm-ag2-mode-map
   (let ((map (make-sparse-keymap)))
