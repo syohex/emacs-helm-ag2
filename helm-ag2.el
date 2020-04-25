@@ -433,7 +433,8 @@
              (line (string-to-number (match-string-no-properties 2)))
              (body (match-string-no-properties 3))
              (ovs (overlays-at (line-beginning-position))))
-        (with-current-buffer (find-file-noselect file)
+        (with-current-buffer (or (get-file-buffer file)
+                                 (find-file-noselect file nil t))
           (cl-pushnew (current-buffer) open-buffers)
           (if buffer-read-only
               (cl-incf read-only-files)
