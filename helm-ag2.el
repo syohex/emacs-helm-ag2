@@ -684,8 +684,7 @@ Special commands:
 (defun helm-ag2--up-one-level ()
   (interactive)
   (if (or (not (helm-ag2--root-directory-p))
-          (y-or-n-p "Current directory might be the project root. \
-Continue searching the parent directory? "))
+          (y-or-n-p "Here is project root. Continue searching the parent dir ? "))
       (let ((parent (file-name-directory (directory-file-name default-directory))))
         (helm-run-after-exit
          (lambda ()
