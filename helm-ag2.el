@@ -865,7 +865,7 @@ Special commands:
                           (helm-ag2--highlight-string-matched
                            (match-string-no-properties 2 candidate) patterns))
                   candidate)
-          "")
+          candidate)
       (let* ((split (helm-grep-split-line candidate))
              (file (nth 0 split))
              (lineno (nth 1 split))
@@ -877,7 +877,7 @@ Special commands:
                           ":"
                           (helm-ag2--highlight-string-matched str patterns))
                   candidate)
-          "")))))
+          candidate)))))
 
 (defun helm-do-ag2--filter-one-by-one (candidate)
   (save-excursion
