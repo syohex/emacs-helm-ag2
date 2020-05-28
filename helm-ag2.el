@@ -232,7 +232,10 @@
 
 (defun helm-ag2--persistent-action (candidate)
   (helm-ag2--find-file-action candidate #'find-file t)
-  (helm-highlight-current-line))
+  (let ((helm-input (if (string-empty-p helm-input) ;; helm-ag2 case
+                        helm-ag2--last-query
+                      helm-input)))
+    (helm-highlight-current-line)))
 
 (defun helm-ag2--validate-regexp (regexp)
   (condition-case nil
@@ -895,6 +898,7 @@ Special commands:
    (requires-pattern :initform 3)
    (nomark :initform t)
    (action :initform 'helm-ag2--actions)
+   (persistent-action :initform 'helm-ag2--persistent-action)
    (group :initform 'helm-grep)))
 
 (defvar helm-source-do-ag2 nil)
