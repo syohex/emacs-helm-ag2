@@ -231,11 +231,12 @@
       (font-lock-fontify-region (point-min) (point-max)))))
 
 (defun helm-ag2--persistent-action (candidate)
-  (helm-ag2--find-file-action candidate #'find-file t)
-  (let ((helm-input (if (string-empty-p helm-input) ;; helm-ag2 case
-                        helm-ag2--last-query
-                      helm-input)))
-    (helm-highlight-current-line)))
+  (let* ((helm-ag2-p (assoc-default 'real-to-display (helm-get-current-source))))
+    (helm-ag2--find-file-action candidate #'find-file t)
+    (let ((helm-input (if helm-ag2-p
+                          (concat helm-ag2--last-query " " helm-input)
+                        helm-input)))
+      (helm-highlight-current-line))))
 
 (defun helm-ag2--validate-regexp (regexp)
   (condition-case nil
