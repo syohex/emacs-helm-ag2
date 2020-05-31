@@ -879,13 +879,13 @@ Special commands:
   ((nohighlight :initform t)
    (keymap :initform helm-do-ag2-map)
    (history :initform 'helm-ag2--helm-history)
-   (filter-one-by-one :initform 'helm-do-ag2--filter-one-by-one)
+   (filter-one-by-one :initform #'helm-do-ag2--filter-one-by-one)
    (candidate-number-limit :initform 99999)
    (requires-pattern :initform 3)
    (nomark :initform t)
    (action :initform 'helm-ag2--actions)
-   (persistent-action :initform 'helm-ag2--persistent-action)
-   (group :initform 'helm-grep)))
+   (persistent-action :initform #'helm-ag2--persistent-action)
+   (group :initform 'helm-ag2)))
 
 (defvar helm-source-do-ag2 nil)
 
