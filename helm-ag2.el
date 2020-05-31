@@ -28,9 +28,6 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (defvar helm-help-message))
-
 (require 'cl-lib)
 (require 'helm)
 (require 'helm-grep)
@@ -38,8 +35,6 @@
 (require 'helm-utils)
 (require 'compile)
 (require 'subr-x)
-
-(declare-function helm-help "helm-help")
 
 (defgroup helm-ag2 nil
   "the silver searcher with helm interface"
@@ -388,18 +383,6 @@
   (setq helm-ag2--original-window (selected-window)
         helm-ag2--last-default-directory nil))
 
-(defun helm-ag2--get-default-directory ()
-  (let ((prefix-val (and current-prefix-arg (abs (prefix-numeric-value current-prefix-arg)))))
-    (cond ((not prefix-val) default-directory)
-          ((= prefix-val 4)
-           (file-name-as-directory
-            (read-directory-name "Search directory: " nil nil t)))
-          ((= prefix-val 16)
-           (let ((dirs (list (read-directory-name "Search directory: " nil nil t))))
-             (while (y-or-n-p "More directories ?")
-               (push (read-directory-name "Search directory: " nil nil t) dirs))
-             (reverse dirs))))))
-
 (defun helm-ag2--helm-header (dir)
   (concat "Search at " (abbreviate-file-name dir)))
 
@@ -727,7 +710,9 @@ Special commands:
                  (skip-chars-forward " ")
                  (setq prev (point)))))
       (push (buffer-substring-no-properties prev (point)) patterns)
-      (reverse (cl-loop for p in patterns unless (string= p "") collect p)))))
+      (reverse (cl-loop for p in patterns
+                        unless (string-empty-p p)
+                        collect p)))))
 
 (defsubst helm-ag2--convert-invert-pattern (pattern)
   (when (and (string-prefix-p "!" pattern) (> (length pattern) 1))
