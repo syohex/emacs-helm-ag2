@@ -15,8 +15,6 @@ jobs:
         emacs_version:
           - '26.3'
           - 'snapshot'
-        cask_version:
-          - '0.8.4'
     steps:
       - uses: actions/checkout@v2
       - uses: purcell/setup-emacs@master
