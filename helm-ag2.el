@@ -788,11 +788,6 @@ Special commands:
   (setq helm-do-ag2--commands
         (cons helm-ag2-base-command (helm-ag2--construct-targets helm-ag2--default-target))))
 
-(defun helm-ag2--do-ag-propertize (input)
-  (with-helm-window
-    (helm-ag2--remove-carrige-returns)
-    (helm-ag2--propertize-candidates input)))
-
 (defun helm-ag2--construct-do-ag-command (pattern)
   (let* ((opt-query (helm-ag2--parse-options-and-query pattern))
          (options (car opt-query))
@@ -873,7 +868,10 @@ Special commands:
     (if (consp candidate)
         candidate
       (when (stringp candidate)
-        (helm-ag2--filter-one candidate helm-input)))))
+        (let ((input (if (string-match "\\`\\s-*--\\s-+\\(.+\\)" helm-input)
+                         (match-string-no-properties 1 helm-input)
+                       helm-input)))
+          (helm-ag2--filter-one candidate input))))))
 
 (defclass helm-do-ag2-class (helm-source-async)
   ((nohighlight :initform t)
