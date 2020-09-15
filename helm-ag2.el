@@ -83,6 +83,7 @@
 (defvar helm-ag2--original-window nil)
 (defvar helm-ag2--default-target nil)
 (defvar helm-ag2--ignore-case nil)
+(defvar helm-ag2--search-this-file nil)
 
 (defun helm-ag2--ignore-case-p (cmds input)
   (cl-loop for cmd in cmds
@@ -196,7 +197,7 @@
 
 (defun helm-ag2--find-file-action (candidate find-func &optional persistent)
   (let* ((one-file (helm-ag2--search-only-one-file-p))
-	 (file-line (helm-grep-split-line candidate))
+         (file-line (helm-grep-split-line candidate))
          (filename (or one-file (cl-first file-line) candidate))
          (line (if one-file
                    (cl-first (split-string candidate ":"))
@@ -381,7 +382,8 @@
 
 (defsubst helm-ag2--init-state ()
   (setq helm-ag2--original-window (selected-window)
-        helm-ag2--last-default-directory nil))
+        helm-ag2--last-default-directory nil
+        helm-ag2--search-this-file nil))
 
 (defun helm-ag2--helm-header (dir)
   (concat "Search at " (abbreviate-file-name dir)))
@@ -403,6 +405,8 @@
   ;; $4: file attributes part(filename, line, column)
   (cond ((helm-ag2--vimgrep-option)
          "^\\(?4:\\(?1:[^:]+\\):\\(?2:[1-9][0-9]*\\):[^:]+:\\)\\(?3:.*\\)$")
+        (helm-ag2--search-this-file
+         "^\\(?4:\\(?2:[1-9][0-9]*\\)[:-]\\)\\(?3:.*\\)$")
         (t
          "^\\(?4:\\(?1:[^:]+\\):\\(?2:[1-9][0-9]*\\)[:-]\\)\\(?3:.*\\)$")))
 
@@ -417,7 +421,7 @@
         (kept-buffers (buffer-list))
         open-buffers)
     (while (re-search-forward regexp nil t)
-      (let* ((file (match-string-no-properties 1))
+      (let* ((file (or (match-string-no-properties 1) helm-ag2--search-this-file))
              (line (string-to-number (match-string-no-properties 2)))
              (body (match-string-no-properties 3))
              (ovs (overlays-at (line-beginning-position))))
@@ -924,6 +928,8 @@ Special commands:
                                          (t (list default-directory))))
          (single-file (and (= (length helm-ag2--default-target) 1)
                            (not (file-directory-p (car helm-ag2--default-target))))))
+    (when single-file
+      (setq helm-ag2--search-this-file (car targets)))
     (helm-ag2--save-current-context)
     (if (or (helm-ag2--windows-p) targets) ;; Path argument must be specified on Windows
         (helm-do-ag2--helm single-file)
