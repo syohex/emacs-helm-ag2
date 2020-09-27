@@ -296,7 +296,7 @@
 (defun helm-ag2--candidate-transform-for-files (candidate)
   (helm-aif (helm-grep-split-line candidate)
       (format "%s:%s:%s"
-              (propertize (cl-first it) 'face 'helm-moccur-buffer)
+              (propertize (cl-first it) 'face 'helm-grep-file)
               (propertize (cl-second it) 'face 'helm-grep-lineno)
               (helm-ag2--highlight-candidate (cl-third it)))))
 
@@ -756,7 +756,7 @@ Special commands:
                        (set-text-properties (line-beginning-position) (1- (point))
                                             '(face helm-grep-lineno))
                      (when (re-search-forward helm-grep-split-line-regexp bound t)
-                       (set-text-properties (match-beginning 1) (match-end 1) '(face helm-moccur-buffer))
+                       (set-text-properties (match-beginning 1) (match-end 1) '(face helm-grep-file))
                        (set-text-properties (match-beginning 2) (match-end 2) '(face helm-grep-lineno))
                        (goto-char (match-beginning 3))))
                    (let ((curpoint (point))
@@ -859,7 +859,7 @@ Special commands:
              (lineno (nth 1 split))
              (str (nth 2 split)))
         (if (and lineno str)
-            (cons (concat (propertize file 'face 'helm-moccur-buffer)
+            (cons (concat (propertize file 'face 'helm-grep-file)
                           ":"
                           (propertize lineno 'face 'helm-grep-lineno)
                           ":"
