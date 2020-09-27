@@ -404,7 +404,8 @@
   ;; $3: match body
   ;; $4: file attributes part(filename, line, column)
   (cond ((helm-ag2--vimgrep-option)
-         "^\\(?4:\\(?1:[^:]+\\):\\(?2:[1-9][0-9]*\\):[^:]+:\\)\\(?3:.*\\)$")
+         ;; context line of rg like: filename-line-content
+         "^\\(?4:\\(?:\\(?1:[^:\n]+\\)[:]\\(?2:[1-9][0-9]*\\)[:]\\([^:\n]+:\\)\\|\\(?1:.+\\)-\\(?2:[1-9][0-9]*\\)-\\)\\)\\(?3:[^\n]*\\)$")
         (helm-ag2--search-this-file
          "^\\(?4:\\(?2:[1-9][0-9]*\\)[:-]\\)\\(?3:.*\\)$")
         (t
