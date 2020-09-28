@@ -3,6 +3,7 @@
 ## Introduction
 
 `helm-ag2.el` provides interfaces of [The Silver Searcher](https://github.com/ggreer/the_silver_searcher) with helm.
+`helm-ag2.el` also supports [ripgrep](https://github.com/BurntSushi/ripgrep)
 
 
 ## Features
@@ -154,7 +155,7 @@ current line indicates.
 
 ## ripgrep
 
-You need to build `ripgrep` with `pcre` feature
+You need to build `ripgrep` with `pcre` feature for using all features of `helm-ag2`
 
 ```lisp
 (custom-set-variables
