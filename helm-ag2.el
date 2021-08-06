@@ -163,7 +163,7 @@
 
 (defun helm-ag2--init ()
   (let ((buf-coding buffer-file-coding-system))
-    (helm-attrset 'recenter t)
+    (helm-set-attr 'recenter t)
     (with-current-buffer (helm-candidate-buffer 'global)
       (let* ((default-directory (or helm-ag2--default-directory
                                     default-directory))
@@ -683,7 +683,7 @@ Special commands:
            (let* ((default-directory parent)
                   (helm-ag2--default-directory parent))
              (setq helm-ag2--last-default-directory default-directory)
-             (helm-attrset 'name (helm-ag2--helm-header default-directory) helm-ag2-source)
+             (helm-set-attr 'name (helm-ag2--helm-header default-directory) helm-ag2-source)
              (helm :sources '(helm-ag2-source) :buffer "*helm-ag2*" :keymap helm-ag2-map
                    :history 'helm-ag2--helm-history)))))
     (message nil)))
@@ -694,7 +694,7 @@ Special commands:
   (helm-ag2--init-state)
   (let ((helm-ag2--default-directory (or basedir default-directory)))
     (helm-ag2--query)
-    (helm-attrset 'name (helm-ag2--helm-header helm-ag2--default-directory) helm-ag2-source)
+    (helm-set-attr 'name (helm-ag2--helm-header helm-ag2--default-directory) helm-ag2-source)
     (helm :sources '(helm-ag2-source) :buffer "*helm-ag2*" :keymap helm-ag2-map
           :history 'helm-ag2--helm-history)))
 
@@ -880,7 +880,7 @@ Special commands:
 
 (defclass helm-do-ag2-class (helm-source-async)
   ((nohighlight :initform t)
-   (keymap :initform helm-do-ag2-map)
+   (keymap :initform 'helm-do-ag2-map)
    (history :initform 'helm-ag2--helm-history)
    (filter-one-by-one :initform #'helm-do-ag2--filter-one-by-one)
    (candidate-number-limit :initform 99999)
@@ -904,7 +904,7 @@ Special commands:
             :header-name (lambda (_name)
                            (helm-ag2--helm-header dir))
             :follow (and helm-follow-mode-persistent 1)))
-    (helm-attrset 'single-file single-file helm-source-do-ag2)
+    (helm-set-attr 'single-file single-file helm-source-do-ag2)
     (helm-set-local-variable 'helm-input-idle-delay helm-grep-input-idle-delay)
     (helm :sources 'helm-source-do-ag2 :buffer "*helm-ag2*"
           :input (or (helm-ag2--marked-input)
