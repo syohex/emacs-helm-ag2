@@ -44,10 +44,10 @@
   (memq system-type '(ms-dos windows-nt)))
 
 (defcustom helm-ag2-base-command
-  (if (helm-ag2--windows-p)
-      '("ag" "--vimgrep")
+  (if (executable-find "rg")
+      '("rg" "--pcre2" "--color=never" "--no-heading" "--line-number")
     '("ag" "--nocolor" "--nogroup"))
-  "Base command of `ag'"
+  "Base command of `helm-ag2'"
   :type '(repeat (string)))
 
 (defcustom helm-ag2-insert-at-point 'symbol
