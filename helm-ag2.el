@@ -40,14 +40,11 @@
   "the silver searcher with helm interface"
   :group 'helm)
 
-(defsubst helm-ag2--windows-p ()
-  (memq system-type '(ms-dos windows-nt)))
-
 (defcustom helm-ag2-base-command
-  (if (helm-ag2--windows-p)
-      '("ag" "--vimgrep")
+  (if (executable-find "rg")
+      '("rg" "--pcre2" "--color=never" "--no-heading" "--line-number")
     '("ag" "--nocolor" "--nogroup"))
-  "Base command of `ag'"
+  "Base command of `helm-ag2'"
   :type '(repeat (string)))
 
 (defcustom helm-ag2-insert-at-point 'symbol
@@ -154,13 +151,6 @@
       (setq args (append args (helm-ag2--construct-targets helm-ag2--default-target))))
     (cons command args)))
 
-(defun helm-ag2--remove-carrige-returns ()
-  (when (helm-ag2--windows-p)
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward "\xd" nil t)
-        (replace-match "")))))
-
 (defun helm-ag2--init ()
   (let ((buf-coding buffer-file-coding-system))
     (helm-set-attr 'recenter t)
@@ -180,16 +170,12 @@
               (unless (executable-find search-command)
                 (error "'%s' is not installed" search-command))
               (error "Failed: '%s'" helm-ag2--last-query))))
-        (helm-ag2--remove-carrige-returns)
         (helm-ag2--save-current-context)))))
 
 (add-to-list 'debug-ignored-errors "^No ag output: ")
 
-(defsubst helm-ag2--vimgrep-option ()
-  (member "--vimgrep" helm-ag2--last-command))
-
 (defun helm-ag2--search-only-one-file-p ()
-  (when (and (not (helm-ag2--vimgrep-option)) (assoc 'single-file (helm-get-current-source)))
+  (when (assoc 'single-file (helm-get-current-source))
     (when (= (length helm-ag2--default-target) 1)
       (let ((target (car helm-ag2--default-target)))
         (unless (file-directory-p target)
@@ -403,10 +389,7 @@
   ;; $2: line
   ;; $3: match body
   ;; $4: file attributes part(filename, line, column)
-  (cond ((helm-ag2--vimgrep-option)
-         ;; context line of rg like: filename-line-content
-         "^\\(?4:\\(?:\\(?1:[^:\n]+\\)[:]\\(?2:[1-9][0-9]*\\)[:]\\([^:\n]+:\\)\\|\\(?1:.+\\)-\\(?2:[1-9][0-9]*\\)-\\)\\)\\(?3:[^\n]*\\)$")
-        (helm-ag2--search-this-file
+  (cond (helm-ag2--search-this-file
          "^\\(?4:\\(?2:[1-9][0-9]*\\)[:-]\\)\\(?3:.*\\)$")
         (t
          "^\\(?4:\\(?1:[^:]+\\):\\(?2:[1-9][0-9]*\\)[:-]\\)\\(?3:.*\\)$")))
@@ -629,7 +612,6 @@ Special commands:
          (result (with-temp-buffer
                    (apply #'process-file (car helm-ag2--last-command) nil t nil
                           (cdr helm-ag2--last-command))
-                   (helm-ag2--remove-carrige-returns)
                    (helm-ag2--propertize-candidates helm-ag2--last-query)
                    (buffer-string))))
     (helm-ag2--put-result-in-save-buffer result)
@@ -745,8 +727,7 @@ Special commands:
     (goto-char (point-min))
     (forward-line 1)
     (let ((patterns (helm-ag2--highlight-patterns input)))
-      (cl-loop with one-file-p = (and (not (helm-ag2--vimgrep-option))
-                                      (helm-ag2--search-only-one-file-p))
+      (cl-loop with one-file-p = (helm-ag2--search-only-one-file-p)
                while (not (eobp))
                for num = 1 then (1+ num)
                do
@@ -775,17 +756,15 @@ Special commands:
                  (forward-line 1))))))
 
 (defun helm-ag2--project-root ()
-  (cl-loop for dir in '(".git/" ".git") ;; consider symlink case
-           when (locate-dominating-file default-directory dir)
-           return it))
+  (or (cl-loop for dir in '(".git/" ".git") ;; consider symlink case
+               when (locate-dominating-file default-directory dir)
+               return it)
+      (error "Could not find the project root. This command works only in git repository")))
 
 ;;;###autoload
 (defun helm-ag2-project-root ()
   (interactive)
-  (let ((rootdir (helm-ag2--project-root)))
-    (unless rootdir
-      (error "Could not find the project root. You need to 'git init'"))
-    (helm-ag2 rootdir)))
+  (helm-ag2 (helm-ag2--project-root)))
 
 (defvar helm-do-ag2--commands)
 
@@ -844,8 +823,7 @@ Special commands:
 
 (defun helm-ag2--filter-one (candidate input)
   (let ((patterns (helm-ag2--highlight-patterns input))
-        (one-file-p (and (not (helm-ag2--vimgrep-option))
-                         (helm-ag2--search-only-one-file-p))))
+        (one-file-p (helm-ag2--search-only-one-file-p)))
     (if one-file-p
         (if (string-match "^\\([^:]+\\):\\(.*\\)$" candidate)
             (cons (concat (propertize (match-string-no-properties 1 candidate)
@@ -932,12 +910,17 @@ Special commands:
     (when single-file
       (setq helm-ag2--search-this-file (car targets)))
     (helm-ag2--save-current-context)
-    (if (or (helm-ag2--windows-p) targets) ;; Path argument must be specified on Windows
+    (if single-file
         (helm-do-ag2--helm single-file)
       (let* ((helm-ag2--default-directory
               (file-name-as-directory (car helm-ag2--default-target)))
              (helm-ag2--default-target nil))
-        (helm-do-ag2--helm single-file)))))
+        (helm-do-ag2--helm nil)))))
+
+;;;###autoload
+(defun helm-do-ag2-project-root ()
+  (interactive)
+  (helm-do-ag2 (list (helm-ag2-project-root))))
 
 (provide 'helm-ag2)
 
