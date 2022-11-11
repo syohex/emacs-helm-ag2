@@ -756,17 +756,15 @@ Special commands:
                  (forward-line 1))))))
 
 (defun helm-ag2--project-root ()
-  (cl-loop for dir in '(".git/" ".git") ;; consider symlink case
-           when (locate-dominating-file default-directory dir)
-           return it))
+  (or (cl-loop for dir in '(".git/" ".git") ;; consider symlink case
+               when (locate-dominating-file default-directory dir)
+               return it)
+      (error "Could not find the project root. This command works only in git repository")))
 
 ;;;###autoload
 (defun helm-ag2-project-root ()
   (interactive)
-  (let ((rootdir (helm-ag2--project-root)))
-    (unless rootdir
-      (error "Could not find the project root. You need to 'git init'"))
-    (helm-ag2 rootdir)))
+  (helm-ag2 (helm-ag2--project-root)))
 
 (defvar helm-do-ag2--commands)
 
@@ -918,6 +916,11 @@ Special commands:
               (file-name-as-directory (car helm-ag2--default-target)))
              (helm-ag2--default-target nil))
         (helm-do-ag2--helm nil)))))
+
+;;;###autoload
+(defun helm-do-ag2-project-root ()
+  (interactive)
+  (helm-do-ag2 (list (helm-ag2-project-root))))
 
 (provide 'helm-ag2)
 
