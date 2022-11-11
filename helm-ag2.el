@@ -40,9 +40,6 @@
   "the silver searcher with helm interface"
   :group 'helm)
 
-(defsubst helm-ag2--windows-p ()
-  (memq system-type '(ms-dos windows-nt)))
-
 (defcustom helm-ag2-base-command
   (if (executable-find "rg")
       '("rg" "--pcre2" "--color=never" "--no-heading" "--line-number")
@@ -154,13 +151,6 @@
       (setq args (append args (helm-ag2--construct-targets helm-ag2--default-target))))
     (cons command args)))
 
-(defun helm-ag2--remove-carrige-returns ()
-  (when (helm-ag2--windows-p)
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward "\xd" nil t)
-        (replace-match "")))))
-
 (defun helm-ag2--init ()
   (let ((buf-coding buffer-file-coding-system))
     (helm-set-attr 'recenter t)
@@ -180,7 +170,6 @@
               (unless (executable-find search-command)
                 (error "'%s' is not installed" search-command))
               (error "Failed: '%s'" helm-ag2--last-query))))
-        (helm-ag2--remove-carrige-returns)
         (helm-ag2--save-current-context)))))
 
 (add-to-list 'debug-ignored-errors "^No ag output: ")
@@ -629,7 +618,6 @@ Special commands:
          (result (with-temp-buffer
                    (apply #'process-file (car helm-ag2--last-command) nil t nil
                           (cdr helm-ag2--last-command))
-                   (helm-ag2--remove-carrige-returns)
                    (helm-ag2--propertize-candidates helm-ag2--last-query)
                    (buffer-string))))
     (helm-ag2--put-result-in-save-buffer result)
@@ -932,12 +920,12 @@ Special commands:
     (when single-file
       (setq helm-ag2--search-this-file (car targets)))
     (helm-ag2--save-current-context)
-    (if (or (helm-ag2--windows-p) targets) ;; Path argument must be specified on Windows
+    (if single-file
         (helm-do-ag2--helm single-file)
       (let* ((helm-ag2--default-directory
               (file-name-as-directory (car helm-ag2--default-target)))
              (helm-ag2--default-target nil))
-        (helm-do-ag2--helm single-file)))))
+        (helm-do-ag2--helm nil)))))
 
 (provide 'helm-ag2)
 
