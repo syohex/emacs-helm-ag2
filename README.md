@@ -2,8 +2,9 @@
 
 ## Introduction
 
-`helm-ag2.el` provides interfaces of [The Silver Searcher](https://github.com/ggreer/the_silver_searcher) with helm.
-`helm-ag2.el` also supports [ripgrep](https://github.com/BurntSushi/ripgrep)
+`helm-ag2.el` provides interfaces of [The Silver Searcher](https://github.com/ggreer/the_silver_searcher) and [ripgrep](https://github.com/BurntSushi/ripgrep) with helm.
+
+`helm-ag2.el` uses `rg` command if ripgrep is installed, otherwise it uses `ag` command. `ripgrep` must be built with `pcre2` feature.
 
 
 ## Features
@@ -102,10 +103,6 @@ You can set the parameter same as `thing-at-point`(Such as `'word`, `symbol` etc
 
 Save buffers you edit at editing completed.
 
-#### NOTE
-
-`helm` removes `file-line` type feature from 1.6.9. So `helm-ag2-source-type` is no longer available.
-
 
 ## Keymap
 
@@ -149,15 +146,5 @@ current line indicates.
 ```lisp
 (custom-set-variables
  '(helm-ag2-base-command '("ag" "--nocolor" "--nogroup" "--ignore-case"))
- '(helm-ag2-insert-at-point 'symbol)
- '(helm-ag2-ignore-buffer-patterns '("\\.txt\\'" "\\.mkd\\'")))
-```
-
-## ripgrep
-
-You need to build `ripgrep` with `pcre` feature for using all features of `helm-ag2`
-
-```lisp
-(custom-set-variables
- '(helm-ag-base-command '("rg" "--pcre2" "--color=never" "--vimgrep")))
+ '(helm-ag2-insert-at-point 'symbol))
 ```
