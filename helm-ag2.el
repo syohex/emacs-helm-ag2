@@ -174,11 +174,8 @@
 
 (add-to-list 'debug-ignored-errors "^No ag output: ")
 
-(defsubst helm-ag2--vimgrep-option ()
-  (member "--vimgrep" helm-ag2--last-command))
-
 (defun helm-ag2--search-only-one-file-p ()
-  (when (and (not (helm-ag2--vimgrep-option)) (assoc 'single-file (helm-get-current-source)))
+  (when (assoc 'single-file (helm-get-current-source))
     (when (= (length helm-ag2--default-target) 1)
       (let ((target (car helm-ag2--default-target)))
         (unless (file-directory-p target)
@@ -392,10 +389,7 @@
   ;; $2: line
   ;; $3: match body
   ;; $4: file attributes part(filename, line, column)
-  (cond ((helm-ag2--vimgrep-option)
-         ;; context line of rg like: filename-line-content
-         "^\\(?4:\\(?:\\(?1:[^:\n]+\\)[:]\\(?2:[1-9][0-9]*\\)[:]\\([^:\n]+:\\)\\|\\(?1:.+\\)-\\(?2:[1-9][0-9]*\\)-\\)\\)\\(?3:[^\n]*\\)$")
-        (helm-ag2--search-this-file
+  (cond (helm-ag2--search-this-file
          "^\\(?4:\\(?2:[1-9][0-9]*\\)[:-]\\)\\(?3:.*\\)$")
         (t
          "^\\(?4:\\(?1:[^:]+\\):\\(?2:[1-9][0-9]*\\)[:-]\\)\\(?3:.*\\)$")))
@@ -733,8 +727,7 @@ Special commands:
     (goto-char (point-min))
     (forward-line 1)
     (let ((patterns (helm-ag2--highlight-patterns input)))
-      (cl-loop with one-file-p = (and (not (helm-ag2--vimgrep-option))
-                                      (helm-ag2--search-only-one-file-p))
+      (cl-loop with one-file-p = (helm-ag2--search-only-one-file-p)
                while (not (eobp))
                for num = 1 then (1+ num)
                do
@@ -832,8 +825,7 @@ Special commands:
 
 (defun helm-ag2--filter-one (candidate input)
   (let ((patterns (helm-ag2--highlight-patterns input))
-        (one-file-p (and (not (helm-ag2--vimgrep-option))
-                         (helm-ag2--search-only-one-file-p))))
+        (one-file-p (helm-ag2--search-only-one-file-p)))
     (if one-file-p
         (if (string-match "^\\([^:]+\\):\\(.*\\)$" candidate)
             (cons (concat (propertize (match-string-no-properties 1 candidate)
