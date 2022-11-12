@@ -4,5 +4,4 @@
 (package-file "helm-ag2.el")
 
 (development
- (depends-on "ert")
- (depends-on "helm-projectile"))
+ (depends-on "ert"))
