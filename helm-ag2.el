@@ -755,16 +755,16 @@ Special commands:
                    (put-text-property start bound 'helm-cand-num num))
                  (forward-line 1))))))
 
-(defun helm-ag2--project-root ()
-  (or (cl-loop for dir in '(".git/" ".git") ;; consider symlink case
+(defun helm-ag2--get-project-root ()
+  (or (cl-loop for dir in '("Cargo.toml" "go.mod" ".git/" ".git") ;; consider symlink case
                when (locate-dominating-file default-directory dir)
                return it)
-      (error "Could not find the project root. This command works only in git repository")))
+      (error "Could not find the project root")))
 
 ;;;###autoload
 (defun helm-ag2-project-root ()
   (interactive)
-  (helm-ag2 (helm-ag2--project-root)))
+  (helm-ag2 (helm-ag2--get-project-root)))
 
 (defvar helm-do-ag2--commands)
 
@@ -920,7 +920,8 @@ Special commands:
 ;;;###autoload
 (defun helm-do-ag2-project-root ()
   (interactive)
-  (helm-do-ag2 (list (helm-ag2-project-root))))
+  (let ((default-directory (helm-ag2--get-project-root)))
+    (helm-do-ag2)))
 
 (provide 'helm-ag2)
 
