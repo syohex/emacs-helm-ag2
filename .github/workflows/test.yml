@@ -13,8 +13,8 @@ jobs:
     strategy:
       matrix:
         emacs_version:
-          - '29.1'
-          - 'snapshot'
+          - 30.1
+          - snapshot
     steps:
       - uses: actions/checkout@v4
       - uses: purcell/setup-emacs@master
